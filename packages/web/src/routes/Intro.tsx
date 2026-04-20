@@ -1,15 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import type { ClientEvent, SessionSnapshot } from "@app/shared";
+import type { ClientEvent, SessionSnapshot, SessionStateName } from "@app/shared";
 import { connectIntroSocket, type AppSocket } from "../net/socket.js";
 import { StartView } from "../views/intro/StartView.js";
 import { SetupView } from "../views/intro/SetupView.js";
 import { PlayerNamingWaitView } from "../views/intro/PlayerNamingWaitView.js";
 import { GuideView } from "../views/intro/GuideView.js";
 import { FinishView } from "../views/intro/FinishView.js";
+import { showFinishText, showStartText } from "../fx/textEffects.js";
+import { playDrumroll, playFanfare } from "../fx/sounds.js";
 
 export function Intro() {
   const [snap, setSnap] = useState<SessionSnapshot | null>(null);
   const socketRef = useRef<AppSocket | null>(null);
+  const prevStateRef = useRef<SessionStateName | null>(null);
+  // 「ゲーム開始」演出はセッション中 1 度だけ出す。waiting に戻ったらリセット。
+  const sessionStartShownRef = useRef(false);
 
   useEffect(() => {
     const s = connectIntroSocket();
@@ -20,6 +25,31 @@ export function Intro() {
       socketRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    if (!snap) return;
+    const prev = prevStateRef.current;
+    const curr = snap.state;
+    prevStateRef.current = curr;
+
+    // ゲーム開始時 (セットアップ/ネーミング完了後に初めて roundLoading に入った瞬間)
+    if (curr === "roundLoading" && !sessionStartShownRef.current) {
+      sessionStartShownRef.current = true;
+      showFinishText();
+      playFanfare();
+    }
+
+    // ゲーム終了時 (roundResult → totalResult 遷移)
+    if (prev !== "totalResult" && curr === "totalResult") {
+      showStartText();
+      playDrumroll(1.2);
+    }
+
+    // waiting に戻ったらセッション用フラグをリセット
+    if (curr === "waiting") {
+      sessionStartShownRef.current = false;
+    }
+  }, [snap]);
 
   function trigger(ev: ClientEvent) {
     socketRef.current?.emit("client:event", ev);
