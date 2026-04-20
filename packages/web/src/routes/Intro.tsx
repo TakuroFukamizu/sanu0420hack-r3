@@ -34,7 +34,7 @@ export function Intro() {
     case "roundLoading":
     case "roundPlaying":
     case "roundResult":
-      return <GuideView currentRound={snap.currentRound} />;
+      return <GuideView currentRound={snap.currentRound} subState={snap.state} />;
     case "totalResult":
       return <FinishView onReset={() => trigger({ type: "RESET" })} />;
     default: {

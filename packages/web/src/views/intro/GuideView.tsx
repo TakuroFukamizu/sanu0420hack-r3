@@ -1,10 +1,16 @@
 import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
-import type { PlayerUrls } from "@app/shared";
+import type { PlayerUrls, SessionStateName } from "@app/shared";
 import { fetchPlayerUrls } from "../../net/api.js";
+
+type GuideSubState = Extract<
+  SessionStateName,
+  "roundLoading" | "roundPlaying" | "roundResult"
+>;
 
 interface Props {
   currentRound: number | null;
+  subState: GuideSubState;
 }
 
 function fallbackUrls(): PlayerUrls {
@@ -16,7 +22,7 @@ function fallbackUrls(): PlayerUrls {
   };
 }
 
-export function GuideView({ currentRound }: Props) {
+export function GuideView({ currentRound, subState }: Props) {
   const [urls, setUrls] = useState<PlayerUrls | null>(null);
 
   useEffect(() => {
@@ -45,7 +51,9 @@ export function GuideView({ currentRound }: Props) {
     <main className="intro-guide">
       <h1>プレイヤー画面の前に移動してください</h1>
       <p className="hint">
-        Round {currentRound ?? 1} の準備中…
+        {subState === "roundLoading" && `Round ${currentRound ?? 1} ゲーム選出中…`}
+        {subState === "roundPlaying" && `Round ${currentRound ?? 1} プレイ中…`}
+        {subState === "roundResult" && `Round ${currentRound ?? 1} 結果表示中…`}
       </p>
       <div className="url-grid">
         <div className="card">
