@@ -203,17 +203,19 @@ code { font-family: ui-monospace, SFMono-Regular, monospace; }
 .error-screen { color: #ff6b6b; }
 
 /* ---------------- Player: Round Result (Phase 3 実装) ---------------- */
+/* 1872×460 (dev browser) と 1920×540 (LG) の両方で縦に収まる目標。
+   score-value を大きくしすぎると 460 を超えるので 140px でキャップする。 */
 .player-round-result {
   display: grid;
   place-items: center;
   text-align: center;
-  padding: 40px;
+  padding: 20px 40px;
   background: linear-gradient(180deg, #1b1044, #120a28);
   color: white;
-  gap: 24px;
+  gap: 12px;
 }
 .player-round-result h1 {
-  font-size: clamp(40px, 6vw, 72px);
+  font-size: clamp(32px, 5vw, 56px);
   margin: 0;
   letter-spacing: 0.02em;
 }
@@ -224,83 +226,87 @@ code { font-family: ui-monospace, SFMono-Regular, monospace; }
   font-variant-numeric: tabular-nums;
 }
 .player-round-result .score-value {
-  font-size: clamp(80px, 16vw, 200px);
+  font-size: clamp(72px, 12vw, 140px);
   font-weight: 800;
   color: #ffde6b;
   text-shadow: 0 4px 40px rgba(255, 222, 107, 0.4);
+  line-height: 1;
 }
 .player-round-result .score-unit {
-  font-size: 36px;
+  font-size: 32px;
   color: #aab;
 }
 .player-round-result .qualitative {
-  font-size: clamp(20px, 3vw, 32px);
+  font-size: clamp(18px, 2.4vw, 28px);
   color: #ccd;
-  max-width: 900px;
+  max-width: 1200px;
   margin: 0 32px;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 /* ---------------- Player: Total Result (Phase 3 実装) ---------------- */
+/* 1872×460 枠に収めるためフォント / padding / gap を圧縮。
+   verdict は 3 行程度まで想定し line-height 1.35 * 28px * 3 = ~113px + 余白。 */
 .player-total-result {
   display: grid;
   place-items: center;
   align-content: center;
   text-align: center;
-  padding: 40px;
+  padding: 16px 40px;
   background: radial-gradient(ellipse at center, #332066, #0a0a14);
   color: white;
-  gap: 24px;
+  gap: 12px;
 }
 .player-total-result h1 {
-  font-size: clamp(36px, 5vw, 56px);
+  font-size: clamp(28px, 3.5vw, 40px);
   margin: 0;
   color: #ffde6b;
 }
 .player-total-result .verdict {
-  font-size: clamp(28px, 4vw, 48px);
+  font-size: clamp(20px, 2.4vw, 28px);
   font-weight: 700;
   margin: 0;
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
-  max-width: 1200px;
-  line-height: 1.4;
+  max-width: 1600px;
+  line-height: 1.35;
 }
 .player-total-result .score-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-top: 16px;
+  gap: 12px;
+  margin-top: 4px;
   max-width: 1200px;
   width: 100%;
 }
 .player-total-result .round-cell {
   background: rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 16px 12px;
+  border-radius: 10px;
+  padding: 8px 12px;
 }
 .player-total-result .round-cell.total {
   background: rgba(255, 222, 107, 0.2);
   border: 1px solid #ffde6b;
 }
 .player-total-result .round-label {
-  font-size: 16px;
+  font-size: 14px;
   color: #aab;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .player-total-result .round-score {
-  font-size: clamp(36px, 6vw, 64px);
+  font-size: clamp(28px, 3.5vw, 44px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
 /* ---------------- Player: Naming (hiragana keyboard) ---------------- */
+/* 1872×460 枠に収めるため padding / ヘッダー高さを控えめに。 */
 .player-naming {
   display: grid;
   grid-template-rows: auto 1fr;
-  padding: 24px 32px;
+  padding: 12px 24px;
   background: radial-gradient(ellipse at center, #201844, #0a0a14);
   color: white;
-  gap: 16px;
+  gap: 10px;
   min-height: 100vh;
 }
 .player-naming header {
@@ -310,17 +316,18 @@ code { font-family: ui-monospace, SFMono-Regular, monospace; }
   gap: 24px;
 }
 .player-naming .pn-title {
-  font-size: 28px;
+  font-size: 24px;
   color: #aab;
 }
 .player-naming .pn-input {
-  font-size: 56px;
+  font-size: 44px;
   font-weight: 700;
   font-variant-east-asian: proportional-width;
   letter-spacing: 0.04em;
   flex: 1;
   color: #ffde6b;
   text-shadow: 0 2px 20px rgba(255, 222, 107, 0.3);
+  line-height: 1.1;
 }
 .player-naming .pn-cursor {
   display: inline-block;
@@ -346,14 +353,14 @@ code { font-family: ui-monospace, SFMono-Regular, monospace; }
 }
 .hk-key {
   font-family: inherit;
-  font-size: 26px;
-  padding: 12px 0;
+  font-size: 24px;
+  padding: 8px 0;
   border-radius: 8px;
   border: 1px solid #334;
   background: #1e1e32;
   color: white;
   cursor: pointer;
-  min-height: 48px;
+  min-height: 40px;
 }
 .hk-key:disabled {
   opacity: 0.2;
