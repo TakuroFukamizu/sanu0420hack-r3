@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import type { SetupData } from "@app/shared";
+import type { SetupData, Relationship } from "@app/shared";
 
 interface Props {
   onSubmit: (data: SetupData) => void;
@@ -23,7 +23,7 @@ export function SetupView({ onSubmit }: Props) {
         A: { id: "A", name: nameA.trim() },
         B: { id: "B", name: nameB.trim() },
       },
-      relationship: relationship.trim(),
+      relationship: relationship.trim() as Relationship,
     });
   }
 

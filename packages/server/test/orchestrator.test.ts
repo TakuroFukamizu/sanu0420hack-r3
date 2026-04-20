@@ -10,7 +10,7 @@ function setupData(): SetupData {
       A: { id: "A", name: "Alice" },
       B: { id: "B", name: "Bob" },
     },
-    relationship: "友人",
+    relationship: "友達" as const,
   };
 }
 

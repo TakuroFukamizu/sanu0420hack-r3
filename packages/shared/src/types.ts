@@ -2,7 +2,7 @@ export type PlayerId = "A" | "B";
 export type Role = "intro" | "player";
 export type RoundNumber = 1 | 2 | 3;
 
-export type Relationship = string; // 自由入力 (例: 友人 / 恋人 / 親子)
+export type Relationship = "カップル" | "気になっている" | "友達" | "親子";
 
 export interface PlayerProfile {
   id: PlayerId;
@@ -17,6 +17,7 @@ export interface SetupData {
 export type SessionStateName =
   | "waiting"
   | "setup"
+  | "playerNaming"
   | "roundLoading"
   | "roundPlaying"
   | "roundResult"
@@ -47,6 +48,7 @@ export interface PlayerInput {
 export type ClientToServerEvents = {
   "client:event": (event: ClientEvent) => void;
   "player:input": (input: PlayerInput) => void;
+  "player:setup": (payload: { name: string }) => void;
 };
 
 export type ServerToClientEvents = {

@@ -29,7 +29,7 @@ describe("SessionRuntime", () => {
       type: "SETUP_DONE",
       data: {
         players: { A: { id: "A", name: "a" }, B: { id: "B", name: "b" } },
-        relationship: "友人",
+        relationship: "友達" as const,
       },
     });
     unsub();

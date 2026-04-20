@@ -37,6 +37,7 @@ export function Player() {
   switch (snap.state) {
     case "waiting":
     case "setup":
+    case "playerNaming":
       return <WaitingView playerId={playerId} />;
     case "roundLoading":
       return <LoadingView round={snap.currentRound} />;

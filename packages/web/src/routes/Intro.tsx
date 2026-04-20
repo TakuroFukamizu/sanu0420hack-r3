@@ -31,6 +31,8 @@ export function Intro() {
       return <StartView onStart={() => trigger({ type: "START" })} />;
     case "setup":
       return <SetupView onSubmit={(data) => trigger({ type: "SETUP_DONE", data })} />;
+    case "playerNaming":
+      return <SetupView onSubmit={(data) => trigger({ type: "SETUP_DONE", data })} />;
     case "roundLoading":
     case "roundPlaying":
     case "roundResult":

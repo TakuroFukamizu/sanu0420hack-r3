@@ -1,5 +1,6 @@
 import { assign, setup } from "xstate";
 import type {
+  PlayerId,
   RoundNumber,
   SessionSnapshot,
   SessionStateName,
@@ -17,6 +18,7 @@ export interface SessionContext {
 export type SessionEvent =
   | { type: "START" }
   | { type: "SETUP_DONE"; data: SetupData }
+  | { type: "PLAYER_NAMED"; playerId: PlayerId; name: string }
   | { type: "ROUND_READY" }
   | { type: "ROUND_COMPLETE"; score: number; qualitative: string }
   | { type: "NEXT_ROUND" }

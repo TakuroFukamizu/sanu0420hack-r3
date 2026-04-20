@@ -8,7 +8,7 @@ function setupData() {
       A: { id: "A" as const, name: "Alice" },
       B: { id: "B" as const, name: "Bob" },
     },
-    relationship: "友人",
+    relationship: "友達" as const,
   };
 }
 
@@ -31,7 +31,7 @@ describe("sessionMachine", () => {
     const snap = actor.getSnapshot();
     expect(snap.value).toEqual({ active: "roundLoading" });
     expect(snap.context.currentRound).toBe(1);
-    expect(snap.context.setup?.relationship).toBe("友人");
+    expect(snap.context.setup?.relationship).toBe("友達");
   });
 
   it("round cycle: loading -> playing -> result -> next loading", () => {
