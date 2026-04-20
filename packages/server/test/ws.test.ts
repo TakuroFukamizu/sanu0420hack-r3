@@ -96,6 +96,43 @@ describe("Socket.io /session", () => {
     intro.close();
   });
 
+  it("intro SETUP_DONE broadcasts roundLoading to intro + playerA + playerB", async () => {
+    const intro = connectClient("intro");
+    const playerA = connectClient("player", "A");
+    const playerB = connectClient("player", "B");
+
+    await Promise.all([nextState(intro), nextState(playerA), nextState(playerB)]);
+
+    const allSetup = Promise.all([
+      nextState(intro, (s) => s.state === "setup"),
+      nextState(playerA, (s) => s.state === "setup"),
+      nextState(playerB, (s) => s.state === "setup"),
+    ]);
+    intro.emit("client:event", { type: "START" });
+    await allSetup;
+
+    const allRoundLoading = Promise.all([
+      nextState(intro, (s) => s.state === "roundLoading"),
+      nextState(playerA, (s) => s.state === "roundLoading"),
+      nextState(playerB, (s) => s.state === "roundLoading"),
+    ]);
+    intro.emit("client:event", {
+      type: "SETUP_DONE",
+      data: {
+        players: {
+          A: { id: "A", name: "Alice" },
+          B: { id: "B", name: "Bob" },
+        },
+        relationship: "友人",
+      },
+    });
+    await allRoundLoading;
+
+    intro.close();
+    playerA.close();
+    playerB.close();
+  });
+
   it("rejects connection with unknown role", async () => {
     const bad = ioClient(`${address}/session`, {
       query: { role: "spectator" },
