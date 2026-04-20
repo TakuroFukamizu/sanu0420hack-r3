@@ -99,6 +99,7 @@ export type SessionEvent =
 - `"player:setup"` ハンドラ追加:
   - `socket.data.role !== "player"` なら無視。
   - `socket.data.playerId` が A/B でないなら無視。
+  - **payload の型ガード**: `typeof payload?.name === "string"` を満たさないなら無視 (壊れたクライアントや手打ち socket から `null`/数値が来た時の実行時例外を防止)。
   - `runtime.send({ type: "PLAYER_NAMED", playerId, name: payload.name })`。
 - 名前のバリデーション（空文字・長すぎ）はマシン側 `applyPlayerName` でまとめて処理する。
 
@@ -111,7 +112,8 @@ export type SessionEvent =
 - 名前入力欄・state・バリデーションは削除。
 
 ### `Intro.tsx`
-- `case "playerNaming"` を追加し、専用の待機ビュー（例: `PlayerNamingWaitView`）を描画。「プレイヤーが名前を入力中…」と A/B の入力済みステータス (○/未) を表示。`snap.setup` は non-null 前提 (§ 7.null ガード参照)。
+- `case "playerNaming"` を追加し、専用の待機ビュー（例: `PlayerNamingWaitView`）を描画。「プレイヤーが名前を入力中…」と A/B の入力済みステータス (○/未) を表示。
+- `Player.tsx` 同様、`case "playerNaming"` 分岐の先頭で `if (!snap.setup) return null;` の narrow を入れ、以降は non-null 前提で `snap.setup.players.{A,B}.name` を読む。
 
 ## 7. プレイヤー UI 変更
 
