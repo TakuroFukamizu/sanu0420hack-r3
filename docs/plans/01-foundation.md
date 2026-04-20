@@ -208,12 +208,13 @@ git commit -m "chore: init pnpm monorepo with TS/Vitest"
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src"
+    "outDir": "./dist"
   },
   "include": ["src/**/*", "test/**/*"]
 }
 ```
+
+> `rootDir` は明示しない。`test/` を `include` に含める関係で `src/` と `test/` の共通祖先が `./` になる必要があり、`rootDir: "./src"` と併用すると tsc が TS6059 で失敗する。
 
 - [ ] **Step 3: `packages/shared/vitest.config.ts` を作成**
 
@@ -544,6 +545,7 @@ export const sessionMachine = setup({
       },
     },
     active: {
+      initial: "roundLoading",
       states: {
         roundLoading: {
           on: { ROUND_READY: "roundPlaying" },
@@ -670,12 +672,13 @@ git commit -m "feat(shared): session XState machine + snapshotToDTO"
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src"
+    "outDir": "./dist"
   },
   "include": ["src/**/*", "test/**/*"]
 }
 ```
+
+> shared と同じ理由で `rootDir` は明示しない (TS6059 回避)。
 
 - [ ] **Step 3: `packages/server/vitest.config.ts`**
 
