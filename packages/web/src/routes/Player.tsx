@@ -42,10 +42,14 @@ export function Player() {
       return <GameView round={snap.currentRound} />;
     case "roundResult": {
       const r = snap.currentRound;
-      const score = r ? snap.scores[r] : null;
+      const score = r !== null ? snap.scores[r] : null;
       return <RoundResultView round={r} score={score} />;
     }
     case "totalResult":
       return <TotalResultView verdict={snap.finalVerdict} />;
+    default: {
+      const _exhaustive: never = snap.state;
+      return _exhaustive;
+    }
   }
 }

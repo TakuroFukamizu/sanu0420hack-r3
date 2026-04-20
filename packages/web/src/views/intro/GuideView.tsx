@@ -30,7 +30,9 @@ export function GuideView({ currentRound }: Props) {
           A: server.A ?? fb.A,
           B: server.B ?? fb.B,
         });
-      } catch {
+      } catch (e) {
+        // LG 実機では DevTools が使いにくいので、失敗は console に残してフォールバック
+        console.warn("fetchPlayerUrls failed, falling back to window.location.origin:", e);
         if (!cancelled) setUrls(fb);
       }
     })();

@@ -37,5 +37,10 @@ export function Intro() {
       return <GuideView currentRound={snap.currentRound} />;
     case "totalResult":
       return <FinishView onReset={() => trigger({ type: "RESET" })} />;
+    default: {
+      // 新しい state 名が追加されたらここで TS2322 になり気付ける
+      const _exhaustive: never = snap.state;
+      return _exhaustive;
+    }
   }
 }

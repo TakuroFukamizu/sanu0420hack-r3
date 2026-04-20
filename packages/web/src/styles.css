@@ -10,8 +10,14 @@ code { font-family: ui-monospace, SFMono-Regular, monospace; }
 
 /* ---------------- 動く背景 (Start / Waiting 共通) ---------------- */
 .bg-pan {
+  /* NOTE: `inset` shorthand は Chrome 87+。プレイヤー画面 (Chrome 84) で dev server の
+     未変換 CSS を読む場合に効かないので物理プロパティに展開している。
+     docs/knowledge/player-display-lg-ld290ejs-fpn1.md 参照 */
   position: absolute;
-  inset: -20%;
+  top: -20%;
+  right: -20%;
+  bottom: -20%;
+  left: -20%;
   background: linear-gradient(135deg, #ff7a59, #7a5aff, #59c3ff, #59ffb6);
   background-size: 300% 300%;
   animation: bg-pan 20s ease-in-out infinite;
