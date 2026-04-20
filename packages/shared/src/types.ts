@@ -28,7 +28,7 @@ export interface SessionSnapshot {
   setup: SetupData | null;
   scores: Record<RoundNumber, number | null>;
   qualitativeEvals: Record<RoundNumber, string | null>;
-  finalVerdict: string | null;
+  finalVerdict: string[] | null;
 }
 
 // Client → Server (intro が引くトリガ)

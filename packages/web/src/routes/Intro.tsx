@@ -36,7 +36,13 @@ export function Intro() {
     case "roundResult":
       return <GuideView currentRound={snap.currentRound} subState={snap.state} />;
     case "totalResult":
-      return <FinishView onReset={() => trigger({ type: "RESET" })} />;
+      return (
+        <FinishView
+          scores={snap.scores}
+          verdict={snap.finalVerdict}
+          onReset={() => trigger({ type: "RESET" })}
+        />
+      );
     default: {
       // 新しい state 名が追加されたらここで TS2322 になり気付ける
       const _exhaustive: never = snap.state;

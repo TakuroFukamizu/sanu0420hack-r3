@@ -19,10 +19,31 @@ export function mockQualitative(): string {
   return qualitativePool[Math.floor(Math.random() * qualitativePool.length)]!;
 }
 
-export function mockVerdict(scores: Record<RoundNumber, number | null>): string {
+export function mockVerdict(scores: Record<RoundNumber, number | null>): string[] {
   const total = (scores[1] ?? 0) + (scores[2] ?? 0) + (scores[3] ?? 0);
-  if (total >= 250) return "運命の相手！";
-  if (total >= 200) return "とても相性が良いです";
-  if (total >= 150) return "悪くない関係ですね";
-  return "まだまだこれから！";
+  const tier: readonly [string, string, string] =
+    total >= 250
+      ? [
+          "息がぴったり。言葉を交わさなくても通じている瞬間が何度もありました。",
+          "お互いの強みを素直に頼り合える関係です。",
+          "このままの距離感でぜひ進んでいってください。",
+        ]
+      : total >= 200
+        ? [
+            "呼吸が合う時間が多く、安心感のあるペアでした。",
+            "片方が迷っても、もう一方が自然とフォローに回っていました。",
+            "小さな違いも楽しめる相性です。",
+          ]
+        : total >= 150
+          ? [
+              "良い瞬間と噛み合わない瞬間が半々でした。",
+              "譲り合いが少し多めに出ていたかもしれません。",
+              "もう一度やればぐっと伸びる関係です。",
+            ]
+          : [
+              "お互いのリズムを掴むのに時間がかかっていました。",
+              "意見がすれ違う場面が目立ちました。",
+              "まだ伸びしろたっぷりのペアです。",
+            ];
+  return [...tier];
 }

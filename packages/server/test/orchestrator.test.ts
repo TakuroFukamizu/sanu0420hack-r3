@@ -64,7 +64,9 @@ describe("Orchestrator", () => {
     expect(snap.qualitativeEvals[1]).toBeTypeOf("string");
     expect(snap.qualitativeEvals[2]).toBeTypeOf("string");
     expect(snap.qualitativeEvals[3]).toBeTypeOf("string");
-    expect(snap.finalVerdict).toBeTypeOf("string");
+    expect(Array.isArray(snap.finalVerdict)).toBe(true);
+    expect(snap.finalVerdict?.length).toBe(3);
+    expect(snap.finalVerdict?.[0]).toBeTypeOf("string");
     expect(sched.pendingCount).toBe(0);
   });
 

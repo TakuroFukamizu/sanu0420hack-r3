@@ -67,8 +67,15 @@ export function attachSocketIo(
     socket.emit("session:state", runtime.get());
 
     socket.on("client:event", (ev: ClientEvent) => {
-      if (socket.data.role !== "intro") return; // intro のみ許可
-      runtime.send(ev);
+      if (socket.data.role === "intro") {
+        runtime.send(ev);
+        return;
+      }
+      // player は最終結果画面の「終了」ボタン用に RESET だけ許可。
+      // START / SETUP_DONE など他の制御イベントは無視する。
+      if (socket.data.role === "player" && ev.type === "RESET") {
+        runtime.send(ev);
+      }
     });
 
     socket.on("player:input", (_input: PlayerInput) => {

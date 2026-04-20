@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { PlayerId, SessionSnapshot } from "@app/shared";
-import { connectPlayerSocket } from "../net/socket.js";
+import { connectPlayerSocket, type AppSocket } from "../net/socket.js";
 import { useViewport } from "../hooks/useViewport.js";
 import { WaitingView } from "../views/player/WaitingView.js";
 import { LoadingView } from "../views/player/LoadingView.js";
@@ -17,6 +17,7 @@ export function Player() {
 
   const [snap, setSnap] = useState<SessionSnapshot | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const socketRef = useRef<AppSocket | null>(null);
 
   useEffect(() => {
     if (!playerId) {
@@ -24,10 +25,12 @@ export function Player() {
       return;
     }
     const s = connectPlayerSocket(playerId);
+    socketRef.current = s;
     s.on("session:state", setSnap);
     s.on("connect_error", (e) => setErr(String(e)));
     return () => {
       s.close();
+      socketRef.current = null;
     };
   }, [playerId]);
 
@@ -49,7 +52,13 @@ export function Player() {
       return <RoundResultView round={r} score={score} qualitative={qualitative} />;
     }
     case "totalResult":
-      return <TotalResultView scores={snap.scores} verdict={snap.finalVerdict} />;
+      return (
+        <TotalResultView
+          scores={snap.scores}
+          verdict={snap.finalVerdict}
+          onFinish={() => socketRef.current?.emit("client:event", { type: "RESET" })}
+        />
+      );
     default: {
       const _exhaustive: never = snap.state;
       return _exhaustive;
