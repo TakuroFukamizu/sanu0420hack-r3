@@ -49,7 +49,7 @@ export function Player() {
       return <RoundResultView round={r} score={score} qualitative={qualitative} />;
     }
     case "totalResult":
-      return <TotalResultView verdict={snap.finalVerdict} />;
+      return <TotalResultView scores={snap.scores} verdict={snap.finalVerdict} />;
     default: {
       const _exhaustive: never = snap.state;
       return _exhaustive;

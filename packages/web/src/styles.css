@@ -240,3 +240,55 @@ code { font-family: ui-monospace, SFMono-Regular, monospace; }
   margin: 0 32px;
   line-height: 1.5;
 }
+
+/* ---------------- Player: Total Result (Phase 3 実装) ---------------- */
+.player-total-result {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  text-align: center;
+  padding: 40px;
+  background: radial-gradient(ellipse at center, #332066, #0a0a14);
+  color: white;
+  gap: 24px;
+}
+.player-total-result h1 {
+  font-size: clamp(36px, 5vw, 56px);
+  margin: 0;
+  color: #ffde6b;
+}
+.player-total-result .verdict {
+  font-size: clamp(28px, 4vw, 48px);
+  font-weight: 700;
+  margin: 0;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+  max-width: 1200px;
+  line-height: 1.4;
+}
+.player-total-result .score-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+  max-width: 1200px;
+  width: 100%;
+}
+.player-total-result .round-cell {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px 12px;
+}
+.player-total-result .round-cell.total {
+  background: rgba(255, 222, 107, 0.2);
+  border: 1px solid #ffde6b;
+}
+.player-total-result .round-label {
+  font-size: 16px;
+  color: #aab;
+  margin-bottom: 4px;
+}
+.player-total-result .round-score {
+  font-size: clamp(36px, 6vw, 64px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
