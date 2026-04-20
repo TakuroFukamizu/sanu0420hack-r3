@@ -77,7 +77,9 @@ describe("Orchestrator", () => {
     expect(snap.qualitativeEvals[1]).toBeTypeOf("string");
     expect(snap.qualitativeEvals[2]).toBeTypeOf("string");
     expect(snap.qualitativeEvals[3]).toBeTypeOf("string");
-    expect(snap.finalVerdict).toBeTypeOf("string");
+    expect(Array.isArray(snap.finalVerdict)).toBe(true);
+    expect(snap.finalVerdict?.length).toBe(3);
+    expect(snap.finalVerdict?.[0]).toBeTypeOf("string");
     expect(sched.pendingCount).toBe(0);
   });
 
@@ -252,14 +254,15 @@ describe("Orchestrator with AiGateway injection", () => {
     expect(rt.get().state).toBe("totalResult");
     // mock fallback で currentGame が埋まり、3 ラウンド走破できている。
     expect(rt.get().scores[3]).not.toBeNull();
-    expect(rt.get().finalVerdict).toBeTypeOf("string");
+    expect(Array.isArray(rt.get().finalVerdict)).toBe(true);
+    expect(rt.get().finalVerdict?.length).toBe(3);
   });
 
   it("uses gateway.generateVerdict for final verdict", async () => {
     class CannedGateway extends MockAiGateway {
       readonly name: string = "canned";
-      async generateVerdict(): Promise<string> {
-        return "GEMINI SAYS HELLO";
+      async generateVerdict(): Promise<string[]> {
+        return ["GEMINI SAYS HELLO", "PAGE TWO", "PAGE THREE"];
       }
     }
     orch = new Orchestrator(rt, sched, undefined, {
@@ -270,6 +273,10 @@ describe("Orchestrator with AiGateway injection", () => {
     completeSetupAndNaming(rt);
     for (let i = 0; i < 9; i++) await sched.runAll();
     expect(rt.get().state).toBe("totalResult");
-    expect(rt.get().finalVerdict).toBe("GEMINI SAYS HELLO");
+    expect(rt.get().finalVerdict).toEqual([
+      "GEMINI SAYS HELLO",
+      "PAGE TWO",
+      "PAGE THREE",
+    ]);
   });
 });

@@ -70,7 +70,7 @@ export class Orchestrator {
 
   // AI 応答キャッシュ (セッション単位)。RESET で waiting に戻った時にクリア。
   private sessionPlanPromise: Promise<SessionPlan> | null = null;
-  private verdictPromise: Promise<string> | null = null;
+  private verdictPromise: Promise<string[]> | null = null;
 
   /**
    * stop() のたびに +1 される generation。async timer callback が
@@ -155,7 +155,7 @@ export class Orchestrator {
     }
   }
 
-  private async safeVerdict(args: VerdictArgs): Promise<string> {
+  private async safeVerdict(args: VerdictArgs): Promise<string[]> {
     try {
       return await withTimeout(
         this.gateway.generateVerdict(args),

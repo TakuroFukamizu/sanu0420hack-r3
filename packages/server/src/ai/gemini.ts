@@ -83,17 +83,28 @@ export class GeminiGateway implements AiGateway {
     return text.length > 0 ? text : args.qualitativeFromScoreFn;
   }
 
-  async generateVerdict(args: VerdictArgs): Promise<string> {
+  async generateVerdict(args: VerdictArgs): Promise<string[]> {
     const prompt = buildVerdictPrompt(args);
     const res = await this.ai.models.generateContent({
       model: this.model,
       contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+      },
     });
-    const text = (res.text ?? "").trim().slice(0, 200);
+    const text = res.text ?? "";
     if (!text) {
       throw new Error("generateVerdict: empty response text");
     }
-    return text;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch (e) {
+      throw new Error(
+        `generateVerdict: JSON.parse failed: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
+    return normalizeVerdict(parsed);
   }
 }
 
@@ -144,8 +155,14 @@ R1: ${a.scores[1] ?? 0}点 / "${a.qualitativeEvals[1] ?? ""}"
 R2: ${a.scores[2] ?? 0}点 / "${a.qualitativeEvals[2] ?? ""}"
 R3: ${a.scores[3] ?? 0}点 / "${a.qualitativeEvals[3] ?? ""}"
 
-この2人の相性を1〜2文 (200字以内) の日本語で診断してください。
-絵文字や括弧は不可、文章のみ。`;
+この2人の相性を3つの短い文 (各 80 字以内) で診断してください。
+最終結果画面で 1 枚ずつめくって見せるので、それぞれ独立した観点で書いてください。
+絵文字や括弧は不可、文章のみ。
+
+応答フォーマット (必ず JSON だけで、それ以外の文字列を含めない):
+{
+  "verdicts": ["...", "...", "..."]
+}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -277,6 +294,27 @@ export function narrowPartnerQuiz(
     question: q,
     choices: normalized,
   };
+}
+
+/** Gemini の generateVerdict 応答を `string[]` (長さ 3) に narrow。*/
+export function normalizeVerdict(raw: unknown): string[] {
+  if (!raw || typeof raw !== "object") {
+    throw new Error("verdict: not an object");
+  }
+  const verdicts = (raw as { verdicts?: unknown }).verdicts;
+  if (!Array.isArray(verdicts) || verdicts.length !== 3) {
+    throw new Error(
+      `verdict.verdicts: must be an array of length 3 (got ${
+        Array.isArray(verdicts) ? verdicts.length : typeof verdicts
+      })`,
+    );
+  }
+  return verdicts.map((v, i) => {
+    if (typeof v !== "string" || v.length === 0) {
+      throw new Error(`verdict.verdicts[${i}]: non-empty string required`);
+    }
+    return v.trim().slice(0, 120);
+  });
 }
 
 export function narrowTimingSync(config: object): TimingSyncConfig {

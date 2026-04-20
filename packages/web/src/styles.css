@@ -148,21 +148,86 @@ code { font-family: ui-monospace, SFMono-Regular, monospace; }
 
 /* ---------------- Intro: Finish ---------------- */
 .intro-finish {
-  display: grid;
-  place-items: center;
-  padding: 40px;
-  background: #141428;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 48px 40px;
+  background: radial-gradient(ellipse at center, #261766, #0a0a14);
+  color: white;
   text-align: center;
 }
-.intro-finish button {
+.intro-finish h1 {
+  font-size: clamp(32px, 4vw, 48px);
+  margin: 0;
+  color: #ffde6b;
+}
+.intro-finish .verdict-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 960px;
+  width: 100%;
+  text-align: left;
+}
+.intro-finish .verdict-list li {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 16px 20px;
+  line-height: 1.55;
+}
+.intro-finish .verdict-list .index {
+  color: #ffde6b;
+  font-weight: 700;
   font-size: 20px;
-  padding: 12px 24px;
-  border-radius: 8px;
+  min-width: 40px;
+}
+.intro-finish .verdict-list .text {
+  font-size: clamp(18px, 2vw, 22px);
+  color: #eef;
+}
+.intro-finish .score-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  max-width: 960px;
+  width: 100%;
+}
+.intro-finish .round-cell {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px 10px;
+}
+.intro-finish .round-cell.total {
+  background: rgba(255, 222, 107, 0.2);
+  border: 1px solid #ffde6b;
+}
+.intro-finish .round-label {
+  font-size: 14px;
+  color: #aab;
+  margin-bottom: 4px;
+}
+.intro-finish .round-score {
+  font-size: clamp(28px, 4vw, 44px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.intro-finish .finish-button {
+  font-size: 22px;
+  padding: 14px 48px;
+  border-radius: 999px;
   background: #ff7a59;
   color: white;
   border: none;
   cursor: pointer;
-  margin-top: 24px;
+  margin-top: 8px;
+  box-shadow: 0 8px 32px rgba(255, 122, 89, 0.35);
 }
 
 /* ---------------- Player: Loading ---------------- */
@@ -241,36 +306,95 @@ code { font-family: ui-monospace, SFMono-Regular, monospace; }
   line-height: 1.5;
 }
 
-/* ---------------- Player: Total Result (Phase 3 実装) ---------------- */
+/* ---------------- Player: Total Result (4 ページ構成) ---------------- */
+/* 1920x540 を前提。右端に大きな "次へ" ボタン、左側に本文。 */
 .player-total-result {
-  display: grid;
-  place-items: center;
-  align-content: center;
-  text-align: center;
-  padding: 40px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 140px 32px 64px;
   background: radial-gradient(ellipse at center, #332066, #0a0a14);
   color: white;
+  overflow: hidden;
+}
+
+/* P1〜P3: 定性評価ページ */
+.player-total-result.verdict-page {
+  text-align: left;
+}
+.player-total-result .verdict-body {
+  max-width: 1400px;
+  display: flex;
+  flex-direction: column;
   gap: 24px;
 }
-.player-total-result h1 {
-  font-size: clamp(36px, 5vw, 56px);
-  margin: 0;
+.player-total-result .verdict-index {
   color: #ffde6b;
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 800;
+  letter-spacing: 0.05em;
 }
-.player-total-result .verdict {
-  font-size: clamp(28px, 4vw, 48px);
+.player-total-result .verdict-text {
+  font-size: clamp(32px, 4.5vw, 56px);
   font-weight: 700;
   margin: 0;
+  line-height: 1.45;
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
-  max-width: 1200px;
-  line-height: 1.4;
+}
+
+/* 右端の丸 ">" ボタン */
+.player-total-result .page-next {
+  position: absolute;
+  top: 50%;
+  right: 32px;
+  transform: translateY(-50%);
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: none;
+  background: #ffde6b;
+  color: #1a0e3d;
+  font-size: 96px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 12px 40px rgba(255, 222, 107, 0.45);
+  transition: transform 120ms ease;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.player-total-result .page-next:active {
+  transform: translateY(-50%) scale(0.94);
+}
+.player-total-result .page-next:focus-visible {
+  outline: 4px solid white;
+  outline-offset: 4px;
+}
+.player-total-result .page-next > span {
+  display: block;
+  transform: translate(6px, -6px);
+}
+
+/* P4: スコアページ */
+.player-total-result.score-page {
+  flex-direction: column;
+  gap: 20px;
+  padding: 32px 64px;
+  text-align: center;
+}
+.player-total-result.score-page h1 {
+  font-size: clamp(32px, 4vw, 48px);
+  margin: 0;
+  color: #ffde6b;
 }
 .player-total-result .score-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
-  margin-top: 16px;
-  max-width: 1200px;
+  max-width: 1400px;
   width: 100%;
 }
 .player-total-result .round-cell {
@@ -292,6 +416,19 @@ code { font-family: ui-monospace, SFMono-Regular, monospace; }
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
+.player-total-result .finish-button {
+  font-size: 28px;
+  padding: 16px 64px;
+  border-radius: 999px;
+  background: #ff7a59;
+  color: white;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 40px rgba(255, 122, 89, 0.45);
+  transition: transform 120ms ease;
+}
+.player-total-result .finish-button:active { transform: scale(0.96); }
+.player-total-result .finish-button:focus-visible { outline: 4px solid white; outline-offset: 4px; }
 
 /* ---------------- Player: Naming (hiragana keyboard) ---------------- */
 .player-naming {

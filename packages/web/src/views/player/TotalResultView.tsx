@@ -1,22 +1,49 @@
+import { useState } from "react";
 import type { RoundNumber } from "@app/shared";
 
 interface Props {
   scores: Record<RoundNumber, number | null>;
-  verdict: string | null;
+  verdict: string[] | null;
+  onFinish: () => void;
 }
+
+const TOTAL_PAGES = 4;
 
 function sumScores(scores: Record<RoundNumber, number | null>): number {
   return (scores[1] ?? 0) + (scores[2] ?? 0) + (scores[3] ?? 0);
 }
 
-export function TotalResultView({ scores, verdict }: Props) {
+function verdictLine(verdict: string[] | null, index: number): string {
+  return verdict?.[index] ?? "(準備中)";
+}
+
+export function TotalResultView({ scores, verdict, onFinish }: Props) {
+  const [page, setPage] = useState(0);
+
+  if (page < 3) {
+    return (
+      <main className="player-total-result verdict-page">
+        <div className="verdict-body">
+          <div className="verdict-index">#{page + 1}</div>
+          <p className="verdict-text">{verdictLine(verdict, page)}</p>
+        </div>
+        <button
+          type="button"
+          className="page-next"
+          aria-label="次のページ"
+          onClick={() => setPage((p) => Math.min(p + 1, TOTAL_PAGES - 1))}
+        >
+          <span aria-hidden="true">›</span>
+        </button>
+      </main>
+    );
+  }
+
   const total = sumScores(scores);
   const rounds: RoundNumber[] = [1, 2, 3];
-
   return (
-    <main className="player-total-result">
-      <h1>最終診断</h1>
-      <p className="verdict">{verdict ?? "(準備中)"}</p>
+    <main className="player-total-result score-page">
+      <h1>スコア</h1>
       <div className="score-grid">
         {rounds.map((r) => (
           <div key={r} className="round-cell">
@@ -29,6 +56,9 @@ export function TotalResultView({ scores, verdict }: Props) {
           <div className="round-score">{total}</div>
         </div>
       </div>
+      <button type="button" className="finish-button" onClick={onFinish}>
+        終了
+      </button>
     </main>
   );
 }

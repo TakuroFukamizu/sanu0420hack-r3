@@ -174,6 +174,59 @@ describe("Socket.io /session", () => {
     playerB.close();
   });
 
+  it("player 'client:event' RESET is accepted at totalResult (returns to waiting)", async () => {
+    // machine を totalResult まで runtime.send で直接押し込む。
+    // Orchestrator は実スケジューラだが、3s 以下のテスト時間内には発火しないので
+    // 手動駆動と競合しない (各 runtime.send 時に cancelPending が走って再スケジュール)。
+    const rt = app.sessionRuntime;
+    const roundReady = {
+      type: "ROUND_READY" as const,
+      game: {
+        gameId: "sync-answer" as const,
+        perPlayerConfigs: {
+          A: {
+            question: "Q",
+            choices: ["a", "b", "c", "d"] as [string, string, string, string],
+          },
+          B: {
+            question: "Q",
+            choices: ["a", "b", "c", "d"] as [string, string, string, string],
+          },
+        },
+      },
+    };
+    rt.send({ type: "START" });
+    rt.send({
+      type: "SETUP_DONE",
+      data: {
+        players: { A: { id: "A", name: "Alice" }, B: { id: "B", name: "Bob" } },
+        relationship: "友達",
+      },
+    });
+    rt.send({ type: "PLAYER_NAMED", playerId: "A", name: "あきら" });
+    rt.send({ type: "PLAYER_NAMED", playerId: "B", name: "さくら" });
+    for (const n of [1, 2, 3]) {
+      rt.send(roundReady);
+      rt.send({ type: "ROUND_COMPLETE", score: 50, qualitative: `r${n}` });
+      if (n < 3) rt.send({ type: "NEXT_ROUND" });
+    }
+    rt.send({ type: "SESSION_DONE", verdict: ["v1", "v2", "v3"] });
+    expect(rt.get().state).toBe("totalResult");
+
+    const playerA = connectClient("player", "A");
+    await nextState(playerA, (s) => s.state === "totalResult");
+
+    const intro = connectClient("intro");
+    const introWaiting = nextState(intro, (s) => s.state === "waiting");
+
+    playerA.emit("client:event", { type: "RESET" });
+    await introWaiting;
+    expect(rt.get().state).toBe("waiting");
+
+    playerA.close();
+    intro.close();
+  });
+
   it("player:setup from intro is ignored", async () => {
     const intro = connectClient("intro");
     const playerA = connectClient("player", "A");

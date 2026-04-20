@@ -206,14 +206,18 @@ describe("MockAiGateway fallback shape", () => {
     expect(out).toBe(s);
   });
 
-  it("generateVerdict returns a string", async () => {
+  it("generateVerdict returns 3 non-empty strings", async () => {
     const g: AiGateway = new MockAiGateway();
     const out = await g.generateVerdict({
       setup: setupData(),
       scores: { 1: 100, 2: 100, 3: 100 },
       qualitativeEvals: { 1: "good", 2: "good", 3: "good" },
     });
-    expect(typeof out).toBe("string");
-    expect(out.length).toBeGreaterThan(0);
+    expect(Array.isArray(out)).toBe(true);
+    expect(out.length).toBe(3);
+    for (const s of out) {
+      expect(typeof s).toBe("string");
+      expect(s.length).toBeGreaterThan(0);
+    }
   });
 });

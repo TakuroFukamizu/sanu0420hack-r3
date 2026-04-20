@@ -177,9 +177,13 @@ describe("sessionMachine", () => {
       actor.send({ type: "ROUND_COMPLETE", score: n * 10, qualitative: `r${n}` });
       if (n < 3) actor.send({ type: "NEXT_ROUND" });
     }
-    actor.send({ type: "SESSION_DONE", verdict: "運命" });
+    actor.send({ type: "SESSION_DONE", verdict: ["運命1", "運命2", "運命3"] });
     expect(actor.getSnapshot().value).toBe("totalResult");
-    expect(actor.getSnapshot().context.finalVerdict).toBe("運命");
+    expect(actor.getSnapshot().context.finalVerdict).toEqual([
+      "運命1",
+      "運命2",
+      "運命3",
+    ]);
   });
 
   it("totalResult -> waiting on RESET (and state resets)", () => {
@@ -193,7 +197,7 @@ describe("sessionMachine", () => {
       actor.send({ type: "ROUND_COMPLETE", score: n, qualitative: `r${n}` });
       if (n < 3) actor.send({ type: "NEXT_ROUND" });
     }
-    actor.send({ type: "SESSION_DONE", verdict: "ok" });
+    actor.send({ type: "SESSION_DONE", verdict: ["ok", "ok", "ok"] });
     actor.send({ type: "RESET" });
     expect(actor.getSnapshot().value).toBe("waiting");
     expect(actor.getSnapshot().context.scores).toEqual({ 1: null, 2: null, 3: null });
@@ -258,7 +262,7 @@ describe("applyGame action", () => {
       actor.send(mockSyncAnswerEvent());
       actor.send({ type: "ROUND_COMPLETE", score: n, qualitative: "x" });
     }
-    actor.send({ type: "SESSION_DONE", verdict: "ok" });
+    actor.send({ type: "SESSION_DONE", verdict: ["ok", "ok", "ok"] });
     actor.send({ type: "RESET" });
     expect(actor.getSnapshot().context.currentGame).toBeNull();
   });

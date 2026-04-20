@@ -90,7 +90,13 @@ export function Player() {
       return <RoundResultView round={r} score={score} qualitative={qualitative} />;
     }
     case "totalResult":
-      return <TotalResultView scores={snap.scores} verdict={snap.finalVerdict} />;
+      return (
+        <TotalResultView
+          scores={snap.scores}
+          verdict={snap.finalVerdict}
+          onFinish={() => socketRef.current?.emit("client:event", { type: "RESET" })}
+        />
+      );
     default: {
       const _exhaustive: never = snap.state;
       return _exhaustive;

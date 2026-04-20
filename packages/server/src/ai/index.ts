@@ -37,6 +37,7 @@ export interface AiGateway {
    *  Mock は scoreFn の文をそのまま返すので実質 no-op。*/
   refineQualitative(args: QualitativeRefineArgs): Promise<string>;
 
-  /** 3 ラウンドのスコア + 定性評価 + Setup から最終診断を生成。*/
-  generateVerdict(args: VerdictArgs): Promise<string>;
+  /** 3 ラウンドのスコア + 定性評価 + Setup から最終診断を生成。
+   *  TotalResult 画面 P1-P3 に 1 枚ずつ表示する想定で **必ず 3 要素** の配列を返す。*/
+  generateVerdict(args: VerdictArgs): Promise<string[]>;
 }

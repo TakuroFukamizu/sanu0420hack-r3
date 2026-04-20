@@ -14,7 +14,7 @@ export interface SessionContext {
   currentGame: CurrentGame | null;
   scores: Record<RoundNumber, number | null>;
   qualitativeEvals: Record<RoundNumber, string | null>;
-  finalVerdict: string | null;
+  finalVerdict: string[] | null;
 }
 
 export type SessionEvent =
@@ -24,7 +24,7 @@ export type SessionEvent =
   | { type: "ROUND_READY"; game: CurrentGame }
   | { type: "ROUND_COMPLETE"; score: number; qualitative: string }
   | { type: "NEXT_ROUND" }
-  | { type: "SESSION_DONE"; verdict: string }
+  | { type: "SESSION_DONE"; verdict: string[] }
   | { type: "RESET" };
 
 const initialContext: SessionContext = {
