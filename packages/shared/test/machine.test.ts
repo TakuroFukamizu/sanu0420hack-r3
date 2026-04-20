@@ -99,6 +99,16 @@ describe("sessionMachine", () => {
     expect(actor.getSnapshot().context.setup?.players.A.name).toBe("あきら");
   });
 
+  it("PLAYER_NAMED for A sent twice overwrites with the second value", () => {
+    const actor = createActor(sessionMachine).start();
+    actor.send({ type: "START" });
+    actor.send({ type: "SETUP_DONE", data: setupData() });
+    actor.send({ type: "PLAYER_NAMED", playerId: "A", name: "まずい" });
+    actor.send({ type: "PLAYER_NAMED", playerId: "A", name: "あきら" });
+    expect(actor.getSnapshot().context.setup?.players.A.name).toBe("あきら");
+    expect(actor.getSnapshot().value).toBe("playerNaming");
+  });
+
   it("round cycle: loading -> playing -> result -> next loading", () => {
     const actor = createActor(sessionMachine).start();
     actor.send({ type: "START" });
