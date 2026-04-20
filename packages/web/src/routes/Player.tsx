@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { PlayerId, SessionSnapshot } from "@app/shared";
-import { connectPlayerSocket } from "../net/socket.js";
+import { connectPlayerSocket, type AppSocket } from "../net/socket.js";
 import { useViewport } from "../hooks/useViewport.js";
 import { WaitingView } from "../views/player/WaitingView.js";
+import { NamingView } from "../views/player/NamingView.js";
 import { LoadingView } from "../views/player/LoadingView.js";
 import { GameView } from "../views/player/GameView.js";
 import { RoundResultView } from "../views/player/RoundResultView.js";
@@ -17,6 +18,7 @@ export function Player() {
 
   const [snap, setSnap] = useState<SessionSnapshot | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const socketRef = useRef<AppSocket | null>(null);
 
   useEffect(() => {
     if (!playerId) {
@@ -24,10 +26,12 @@ export function Player() {
       return;
     }
     const s = connectPlayerSocket(playerId);
+    socketRef.current = s;
     s.on("session:state", setSnap);
     s.on("connect_error", (e) => setErr(String(e)));
     return () => {
       s.close();
+      socketRef.current = null;
     };
   }, [playerId]);
 
@@ -37,8 +41,21 @@ export function Player() {
   switch (snap.state) {
     case "waiting":
     case "setup":
-    case "playerNaming":
       return <WaitingView playerId={playerId} />;
+    case "playerNaming": {
+      if (!snap.setup) return null;
+      const already = snap.setup.players[playerId].name !== "";
+      if (already) return <WaitingView playerId={playerId} />;
+      return (
+        <NamingView
+          playerId={playerId}
+          onSubmit={(name) => {
+            const s = socketRef.current;
+            s?.emit("player:setup", { name });
+          }}
+        />
+      );
+    }
     case "roundLoading":
       return <LoadingView round={snap.currentRound} />;
     case "roundPlaying":
