@@ -26,6 +26,18 @@ Phase 5 で着手する範囲 (本Phaseでは出さない):
 
 ---
 
+## 前提: playerNaming state & Relationship 4 値ユニオン (Phase 4 着手時点で既に入っている)
+
+本計画は Phase 3 完了 **+ 別途差分で入った playerNaming 機能** を前提にしている。Phase 4 を書く subagent が踏み外さないよう明記する:
+
+- machine の state は `waiting → setup → playerNaming → active.roundLoading → ... → totalResult`。`SETUP_DONE` 直後は **`playerNaming`** (まだ `roundLoading` ではない)。`ROUND_READY` を送る前に `PLAYER_NAMED × 2` が必要。
+- 既存 actions: `applySetup` (名前を `""` に正規化), `applyPlayerName` (trim + 16 文字切り詰め), `enterRound1` (`playerNaming → active.roundLoading` の `always` 遷移で `currentRound=1` をセット), `recordRound`, `advanceRound`, `applyVerdict`, `reset`。**Phase 4 ではこれらを一切書き換えない**。`applyGame` のみを新規追加する。
+- `Relationship` 型は `"カップル" | "気になっている" | "友達" | "親子"` の 4 値ユニオン。`SetupData.relationship` に `"友人"` 等を書くと type error。テストデータも 4 値のいずれかを使う。
+- 既存テストヘルパ `completeSetupAndNaming(rt)` (`orchestrator.test.ts`) が `START → SETUP_DONE → PLAYER_NAMED(A) → PLAYER_NAMED(B)` を 1 行で済ませる。新規テストも必ずこのヘルパ (相当) を経由して roundLoading まで到達させる。machine.test.ts 側には `driveToRoundLoading(actor)` を作って統一 (Task 2 Step 3 参照)。
+- `player:setup` socket event が既に実装済み (ws.ts) で、`PLAYER_NAMED` はここから machine に到達する。Phase 4 では `player:input` の forward を追加するだけで、`player:setup` には触らない。
+
+---
+
 ## File Structure (Phase 4 で作成 / 変更)
 
 ```
@@ -365,14 +377,14 @@ export type SessionEvent =
 
 > TypeScript 的には `CurrentGame` の `gameId` + `perPlayerConfigs` の関係が discriminated union なので、上のように ROUND_READY の `gameId` と `perPlayerConfigs` を並列で書くと type check が緩くなる (「sync-answer のくせに partner-quiz の config」を通してしまう)。**実用優先** でこのまま進める (ユーザ入力ではなく orchestrator が組み立てるので誤ったペアにならない)。厳密化したい場合は `{ type: "ROUND_READY"; game: CurrentGame }` のように 1 ペアにまとめて event を作る代替案がある。
 
-(c) `actions` に `applyGame` を追加し、`roundLoading → roundPlaying` 遷移で実行:
+(c) `actions` に **`applyGame` のみを新規追加** する。**既存の `applySetup` / `applyPlayerName` / `enterRound1` / `recordRound` / `advanceRound` / `applyVerdict` / `reset` はすべて現状維持** (playerNaming 対応のため applySetup は名前を `""` に正規化し、currentRound=1 は `enterRound1` アクションが `playerNaming → active.roundLoading` の `always` 遷移でセットする責務を担っている。Phase 4 でこれらを書き換えないこと)。
+
+追加する `applyGame` のみを示す:
 
 ```ts
   actions: {
-    applySetup: assign(({ event }) => {
-      if (event.type !== "SETUP_DONE") return {};
-      return { setup: event.data, currentRound: 1 as RoundNumber };
-    }),
+    // ...既存の applySetup / applyPlayerName / enterRound1 / recordRound /
+    //    advanceRound / applyVerdict / reset はそのまま残す...
     applyGame: assign(({ event }) => {
       if (event.type !== "ROUND_READY") return {};
       return {
@@ -382,8 +394,6 @@ export type SessionEvent =
         } as CurrentGame,
       };
     }),
-    recordRound: assign(({ context, event }) => { /* 既存のまま */ }),
-    // ...残り既存のまま
   },
 ```
 
@@ -443,14 +453,24 @@ function mockSyncAnswerEvent() {
 - `"SESSION_DONE from roundResult goes to totalResult"`
 - `"totalResult -> waiting on RESET (and state resets)"`
 
+> ⚠️ **playerNaming 注意**: 現状の machine は `setup → SETUP_DONE → playerNaming → (PLAYER_NAMED × 2) → active.roundLoading` のフロー。`SETUP_DONE` 直後は **`playerNaming`** であり、`roundLoading` にはまだ入っていない。`ROUND_READY` を送るには先に両プレイヤーの名前を入れる必要がある。既存テスト (`machine.test.ts`) でも `PLAYER_NAMED × 2` を送るパターンが確立しているので、それをなぞる。ヘルパを用意する:
+
+```ts
+function driveToRoundLoading(actor: ReturnType<typeof createActor<typeof sessionMachine>>) {
+  actor.send({ type: "START" });
+  actor.send({ type: "SETUP_DONE", data: setupData() });
+  actor.send({ type: "PLAYER_NAMED", playerId: "A", name: "Alice" });
+  actor.send({ type: "PLAYER_NAMED", playerId: "B", name: "Bob" });
+}
+```
+
 加えて、新規テストを追加:
 
 ```ts
 describe("applyGame action", () => {
   it("assigns currentGame on ROUND_READY", () => {
     const actor = createActor(sessionMachine).start();
-    actor.send({ type: "START" });
-    actor.send({ type: "SETUP_DONE", data: setupData() });
+    driveToRoundLoading(actor);
     expect(actor.getSnapshot().context.currentGame).toBeNull();
     actor.send(mockSyncAnswerEvent());
     const g = actor.getSnapshot().context.currentGame;
@@ -460,8 +480,7 @@ describe("applyGame action", () => {
 
   it("RESET clears currentGame", () => {
     const actor = createActor(sessionMachine).start();
-    actor.send({ type: "START" });
-    actor.send({ type: "SETUP_DONE", data: setupData() });
+    driveToRoundLoading(actor);
     actor.send(mockSyncAnswerEvent());
     actor.send({ type: "ROUND_COMPLETE", score: 50, qualitative: "x" });
     for (const n of [2, 3]) {
@@ -478,8 +497,7 @@ describe("applyGame action", () => {
 describe("snapshotToDTO currentGame passthrough", () => {
   it("reflects currentGame in DTO after ROUND_READY", () => {
     const actor = createActor(sessionMachine).start();
-    actor.send({ type: "START" });
-    actor.send({ type: "SETUP_DONE", data: setupData() });
+    driveToRoundLoading(actor);
     actor.send(mockSyncAnswerEvent());
     const dto = snapshotToDTO(actor.getSnapshot());
     expect(dto.currentGame?.gameId).toBe("sync-answer");
@@ -487,9 +505,11 @@ describe("snapshotToDTO currentGame passthrough", () => {
 });
 ```
 
-- [ ] **Step 4: `pnpm --filter @app/shared test` で 11+ tests がグリーン**
+既存テスト (ROUND_READY 付き payload 置換) も同様に `driveToRoundLoading(actor)` を先頭で呼ぶ形に統一する。現 `machine.test.ts` はベタに `PLAYER_NAMED × 2` を書いている箇所がいくつもあるので、ヘルパ導入のついでにそれらもリファクタしてよい (必須ではない)。
 
-Expected: 既存 9 tests 全部 pass + 新規 3 tests 追加 (計 12 passing)。
+- [ ] **Step 4: `pnpm --filter @app/shared test` で既存 + 新規が全部グリーン**
+
+Expected: 現状の machine tests 数 + 新規 3 tests 追加。既存テスト数は実装時点で確認。
 
 - [ ] **Step 5: 型チェック**
 
@@ -772,18 +792,17 @@ export class Orchestrator {
 
 ### Step 3: `orchestrator.test.ts` を更新
 
-既存 5 tests の `full cycle` や assertion を以下の通り調整:
+既存 5+2 tests の assertion を以下の通り調整:
 
-(a) `setupData()` はそのまま。
+(a) `setupData()` と既存ヘルパ `completeSetupAndNaming(rt)` はそのまま使う。`completeSetupAndNaming` は `START → SETUP_DONE → PLAYER_NAMED(A) → PLAYER_NAMED(B)` の 4 イベントを順に送り、**state を `roundLoading` まで進める**。
 
-(b) すべての `rt.send({ type: "SETUP_DONE", data: setupData() })` 後の `sched.runAll()` の振る舞いは、ROUND_READY の payload が orchestrator 内で組み立てられる関係で既存と互換 — テスト側では変化なし。
+(b) すべての `rt.send({ type: "SETUP_DONE", ... })` 単独呼び出しを **`completeSetupAndNaming(rt)` に置換する**。`SETUP_DONE` 単独では `playerNaming` 止まりになり、後続の `sched.runAll()` が空振りするため。
 
 (c) 新規テスト追加: 両プレイヤー入力揃えばタイマ待たずに roundResult に遷移。
 
 ```ts
 it("completes a round immediately when both players submit input", () => {
-  rt.send({ type: "START" });
-  rt.send({ type: "SETUP_DONE", data: setupData() });
+  completeSetupAndNaming(rt); // -> roundLoading
   sched.runAll(); // roundLoading timer -> ROUND_READY -> roundPlaying
   expect(rt.get().state).toBe("roundPlaying");
   const current = rt.get().currentGame;
@@ -809,8 +828,7 @@ it("completes a round immediately when both players submit input", () => {
 });
 
 it("completes a round with partial input on timeout", () => {
-  rt.send({ type: "START" });
-  rt.send({ type: "SETUP_DONE", data: setupData() });
+  completeSetupAndNaming(rt); // -> roundLoading
   sched.runAll(); // -> roundPlaying
   const current = rt.get().currentGame!;
   orch.onPlayerInput("A", {
@@ -833,10 +851,10 @@ it("completes a round with partial input on timeout", () => {
 
 `scores[1..3] !== null` の assertion は、`sync-answer` の 100 or 0 を両方とも片方 input で 0 が返る形に落ち着く (両者とも input なし → 0、qualitative "操作が間に合いませんでした…")。現状の machine は `ROUND_COMPLETE` の score を context に assign するので、`scores[1..3]` に数値 0 が入り `toBeNull()` ではなく **non-null** として assertion されている — そのまま通る。
 
-### Step 4: `pnpm --filter @app/server test orchestrator` で 7 tests pass
+### Step 4: `pnpm --filter @app/server test orchestrator` で既存 + 新規が全部 pass
 
 Run `pnpm --filter @app/server test orchestrator`
-Expected: 既存 5 + 新規 2 = 7 pass.
+Expected: 現状 (5+2 = 7) + 新規 2 = 9 pass。現状カウントは Phase 3 以降追加されている分 (playerNaming 関連含む) に合わせて確認。
 
 ### Step 5: 型チェック
 

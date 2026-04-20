@@ -20,6 +20,17 @@ Phase 6 で着手する範囲 (本Phaseでは出さない):
 
 ---
 
+## 前提: playerNaming state
+
+Phase 3 完了後に別途追加された `playerNaming` state (`setup → SETUP_DONE → playerNaming → (PLAYER_NAMED × 2, always guard) → active.roundLoading`) の存在を前提にしている。本 Phase で気をつける点:
+
+- Orchestrator は `playerNaming` では何もしない。idle states switch に **`case "playerNaming":` を明示的に並べる** (`default:` で never 束ねる形にしたので、state 追加忘れが TS で気付ける)。
+- `sessionPlanPromise` の kick-off タイミングは **`roundLoading` round=1 エントリ** のまま。playerNaming を越えた段階でしか両プレイヤー名が確定しないので、Gemini に投げる意味があるのは roundLoading 入った瞬間。
+- 既存テスト (`orchestrator.test.ts`) は `completeSetupAndNaming(rt)` ヘルパ (`START → SETUP_DONE → PLAYER_NAMED × 2`) 経由で roundLoading に到達している。Phase 5 の新規テストも同じヘルパを使う。
+- `Relationship` 型は `"カップル" | "気になっている" | "友達" | "親子"` の 4 値ユニオンに narrow されている。テストや prompt 例で使う文字列はこの 4 値のいずれかを使うこと。
+
+---
+
 ## Architecture 詳細
 
 ### AiGateway の API
@@ -677,11 +688,14 @@ export class Orchestrator {
         this.verdictPromise = null;
         return;
       case "setup":
+      case "playerNaming":
       case "totalResult":
         return;
-      default:
-        // playerNaming や将来の新 state は no-op (ユーザ操作待ち)
-        return;
+      default: {
+        // 将来の新 state を追加したときに TS2322 で気付けるよう never 型で束ねる
+        const _exhaustive: never = snap.state;
+        return _exhaustive;
+      }
     }
   }
 
@@ -1042,7 +1056,7 @@ describe("AiGateway fallback paths", () => {
     const g: AiGateway = new MockAiGateway();
     const plan = await g.planSession({
       players: { A: { id: "A", name: "a" }, B: { id: "B", name: "b" } },
-      relationship: "友人",
+      relationship: "友達",
     });
     expect(plan.rounds).toHaveLength(3);
     const ids = plan.rounds.map((r) => r.gameId);
@@ -1053,7 +1067,7 @@ describe("AiGateway fallback paths", () => {
     const g: AiGateway = new MockAiGateway();
     const s = "originalは変更されない";
     const out = await g.refineQualitative({
-      setup: { players: { A: { id: "A", name: "a" }, B: { id: "B", name: "b" } }, relationship: "x" },
+      setup: { players: { A: { id: "A", name: "a" }, B: { id: "B", name: "b" } }, relationship: "友達" },
       round: 1,
       current: {
         gameId: "sync-answer",
