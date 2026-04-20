@@ -45,7 +45,8 @@ export function Player() {
     case "roundResult": {
       const r = snap.currentRound;
       const score = r !== null ? snap.scores[r] : null;
-      return <RoundResultView round={r} score={score} />;
+      const qualitative = r !== null ? snap.qualitativeEvals[r] : null;
+      return <RoundResultView round={r} score={score} qualitative={qualitative} />;
     }
     case "totalResult":
       return <TotalResultView verdict={snap.finalVerdict} />;

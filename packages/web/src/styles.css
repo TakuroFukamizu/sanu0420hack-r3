@@ -201,3 +201,42 @@ code { font-family: ui-monospace, SFMono-Regular, monospace; }
   font-size: 20px;
 }
 .error-screen { color: #ff6b6b; }
+
+/* ---------------- Player: Round Result (Phase 3 実装) ---------------- */
+.player-round-result {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 40px;
+  background: linear-gradient(180deg, #1b1044, #120a28);
+  color: white;
+  gap: 24px;
+}
+.player-round-result h1 {
+  font-size: clamp(40px, 6vw, 72px);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+.player-round-result .score {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.player-round-result .score-value {
+  font-size: clamp(80px, 16vw, 200px);
+  font-weight: 800;
+  color: #ffde6b;
+  text-shadow: 0 4px 40px rgba(255, 222, 107, 0.4);
+}
+.player-round-result .score-unit {
+  font-size: 36px;
+  color: #aab;
+}
+.player-round-result .qualitative {
+  font-size: clamp(20px, 3vw, 32px);
+  color: #ccd;
+  max-width: 900px;
+  margin: 0 32px;
+  line-height: 1.5;
+}
