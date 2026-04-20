@@ -5,6 +5,7 @@ import { Orchestrator } from "./orchestrator/index.js";
 import type { AiGateway } from "./ai/index.js";
 import { MockAiGateway } from "./ai/mock.js";
 import { GeminiGateway } from "./ai/gemini.js";
+import { GeminiProxyGateway } from "./ai/gemini-proxy.js";
 import {
   MidiController,
   NullMidiOutput,
@@ -29,10 +30,19 @@ export interface BuildAppOptions {
 }
 
 /**
- * GEMINI_API_KEY が設定されていれば GeminiGateway、無ければ MockAiGateway を返す。
+ * AI gateway を env から選ぶ。優先順位:
+ *   1. GEMINI_PROXY_URL  → GeminiProxyGateway (Cloud Run 経由)
+ *   2. GEMINI_API_KEY    → GeminiGateway (直叩き)
+ *   3. いずれも無し       → MockAiGateway
  * ハッカソン会場 WiFi 障害やキー失効時でも Mock で完走するためのフェイルソフト。
+ * 両方が同時に設定されている場合は proxy を優先する (直叩きより運用が簡単なため)。
  */
 function selectGateway(): AiGateway {
+  const proxyUrl = process.env.GEMINI_PROXY_URL?.trim();
+  if (proxyUrl) {
+    console.log("[ai] GEMINI_PROXY_URL present, using GeminiProxyGateway");
+    return new GeminiProxyGateway(proxyUrl);
+  }
   const key = process.env.GEMINI_API_KEY?.trim();
   if (!key) {
     console.log("[ai] GEMINI_API_KEY not set, using MockAiGateway");

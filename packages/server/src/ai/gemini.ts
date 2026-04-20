@@ -112,7 +112,7 @@ export class GeminiGateway implements AiGateway {
 // Prompt builders
 // ---------------------------------------------------------------------------
 
-function buildPlanPrompt(setup: SetupData): string {
+export function buildPlanPrompt(setup: SetupData): string {
   const { players, relationship } = setup;
   return `あなたは2人ペアで遊ぶアーケードゲームのディレクターです。
 プレイヤー: A="${players.A.name}" / B="${players.B.name}"、関係性: "${relationship}"。
@@ -140,7 +140,7 @@ config は gameId に応じて以下の shape:
 日本語で、絵文字は使わないでください。`;
 }
 
-function buildRefinePrompt(a: QualitativeRefineArgs): string {
+export function buildRefinePrompt(a: QualitativeRefineArgs): string {
   return `2人は${a.setup.relationship}の関係。
 Round ${a.round} のゲームは "${a.current.gameId}"、得点 ${a.score} 点。
 scoreFn が提示した感想: 「${a.qualitativeFromScoreFn}」。
@@ -149,7 +149,7 @@ scoreFn が提示した感想: 「${a.qualitativeFromScoreFn}」。
 絵文字は使わない。括弧や前置きは書かず、文章のみ。`;
 }
 
-function buildVerdictPrompt(a: VerdictArgs): string {
+export function buildVerdictPrompt(a: VerdictArgs): string {
   return `2人は${a.setup.relationship}の関係。3ラウンドの結果:
 R1: ${a.scores[1] ?? 0}点 / "${a.qualitativeEvals[1] ?? ""}"
 R2: ${a.scores[2] ?? 0}点 / "${a.qualitativeEvals[2] ?? ""}"
