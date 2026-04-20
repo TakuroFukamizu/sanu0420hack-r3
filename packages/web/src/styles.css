@@ -441,3 +441,73 @@ code { font-family: ui-monospace, SFMono-Regular, monospace; }
   -webkit-touch-callout: none;
   touch-action: manipulation;
 }
+
+/* ---------------- Game (Phase 4 共通) ---------------- */
+.game {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 32px;
+  padding: 40px;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #141428, #0a0a14);
+  color: white;
+  text-align: center;
+}
+.game-question,
+.game-prompt {
+  font-size: clamp(28px, 4vw, 48px);
+  margin: 0;
+  max-width: 1400px;
+  line-height: 1.4;
+}
+.game-wait {
+  color: #9ae;
+  font-size: 20px;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(200px, 1fr));
+  gap: 24px;
+  width: 100%;
+  max-width: 900px;
+}
+.choice {
+  font-size: clamp(24px, 3vw, 36px);
+  padding: 24px 16px;
+  border-radius: 16px;
+  border: 2px solid #334;
+  background: #1e1e32;
+  color: white;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 120ms ease, background 120ms ease;
+}
+.choice:active { transform: scale(0.97); }
+.choice.picked {
+  background: #7a5aff;
+  border-color: #ffde6b;
+}
+.choice:disabled:not(.picked) { opacity: 0.5; }
+
+.tap-button {
+  font-size: clamp(48px, 8vw, 96px);
+  padding: 32px 96px;
+  border-radius: 999px;
+  background: #ff7a59;
+  color: white;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 40px rgba(255, 122, 89, 0.4);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition: transform 80ms ease;
+}
+.tap-button:active { transform: scale(0.93); }
+.tap-button.tapped { background: #555; box-shadow: none; }
