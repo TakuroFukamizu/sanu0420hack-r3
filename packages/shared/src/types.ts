@@ -52,3 +52,8 @@ export type ClientToServerEvents = {
 export type ServerToClientEvents = {
   "session:state": (snapshot: SessionSnapshot) => void;
 };
+
+export interface PlayerUrls {
+  A: string | null;
+  B: string | null;
+}
