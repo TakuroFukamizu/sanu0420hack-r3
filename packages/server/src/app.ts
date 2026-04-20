@@ -5,6 +5,8 @@ import { Orchestrator } from "./orchestrator/index.js";
 import type { AiGateway } from "./ai/index.js";
 import { MockAiGateway } from "./ai/mock.js";
 import { GeminiGateway } from "./ai/gemini.js";
+import { BgmController } from "./midi/bgm-controller.js";
+import { selectMidiOutput, type MidiOutput } from "./midi/output.js";
 
 export interface BuildAppOptions {
   runtime?: SessionRuntime;
@@ -12,6 +14,10 @@ export interface BuildAppOptions {
   orchestrator?: Orchestrator | null;
   /** テストから gateway を直接注入するときに使う (指定時は GEMINI_API_KEY を無視する)。*/
   gateway?: AiGateway;
+  /** テスト等で BGM を差し替え / 無効化する時に使う (null で完全無効化)。*/
+  bgm?: BgmController | null;
+  /** BgmController を内部生成するときに使う MIDI 出力。省略時は MIDI_PORT env から選択。*/
+  midiOutput?: MidiOutput;
 }
 
 /**
@@ -42,13 +48,25 @@ export function buildApp(opts: BuildAppOptions = {}): FastifyInstance {
           refineQualitative,
         }));
 
+  const bgm =
+    opts.bgm === null
+      ? null
+      : (opts.bgm ??
+        new BgmController(
+          runtime,
+          opts.midiOutput ?? selectMidiOutput(process.env.MIDI_PORT),
+        ));
+
   registerHttpRoutes(app);
   app.decorate("sessionRuntime", runtime);
   app.decorate("orchestrator", orchestrator);
+  app.decorate("bgmController", bgm);
 
   orchestrator?.start();
+  bgm?.start();
 
   app.addHook("onClose", async () => {
+    bgm?.dispose();
     orchestrator?.stop();
     runtime.stop();
   });
@@ -60,5 +78,6 @@ declare module "fastify" {
   interface FastifyInstance {
     sessionRuntime: SessionRuntime;
     orchestrator: Orchestrator | null;
+    bgmController: BgmController | null;
   }
 }
