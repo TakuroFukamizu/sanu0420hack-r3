@@ -3,14 +3,13 @@
 // 一致するため `dotenv/config` がデフォルトで読む)。テンプレートは .env.example を参照。
 import "dotenv/config";
 
-import { attachRealMidi, buildApp } from "./app.js";
+import { buildApp } from "./app.js";
 import { attachSocketIo } from "./ws.js";
 
 const app = buildApp();
 const port = Number(process.env.PORT ?? 3000);
 
 await app.ready();
-await attachRealMidi(app, process.env.MIDI_PORT?.trim());
 attachSocketIo(app.server, app.sessionRuntime, app.orchestrator);
 
 app

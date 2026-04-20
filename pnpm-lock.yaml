@@ -29,6 +29,9 @@ importers:
       dotenv:
         specifier: 17.4.2
         version: 17.4.2
+      easymidi:
+        specifier: ^3.2.0
+        version: 3.2.0
       fastify:
         specifier: 5.0.0
         version: 5.0.0
@@ -38,10 +41,6 @@ importers:
       xstate:
         specifier: 5.18.2
         version: 5.18.2
-    optionalDependencies:
-      easymidi:
-        specifier: ^3.2.0
-        version: 3.2.0
     devDependencies:
       socket.io-client:
         specifier: 4.7.5
@@ -1756,7 +1755,6 @@ snapshots:
     dependencies:
       node-addon-api: 6.1.0
       pkg-prebuilds: 1.0.0
-    optional: true
 
   '@pinojs/redact@0.4.0': {}
 
@@ -1983,13 +1981,11 @@ snapshots:
       json-schema-traverse: 1.0.0
       require-from-string: 2.0.2
 
-  ansi-regex@5.0.1:
-    optional: true
+  ansi-regex@5.0.1: {}
 
   ansi-styles@4.3.0:
     dependencies:
       color-convert: 2.0.1
-    optional: true
 
   assertion-error@2.0.1: {}
 
@@ -2037,15 +2033,12 @@ snapshots:
       string-width: 4.2.3
       strip-ansi: 6.0.1
       wrap-ansi: 7.0.0
-    optional: true
 
   color-convert@2.0.1:
     dependencies:
       color-name: 1.1.4
-    optional: true
 
-  color-name@1.1.4:
-    optional: true
+  color-name@1.1.4: {}
 
   convert-source-map@2.0.0: {}
 
@@ -2079,7 +2072,6 @@ snapshots:
   easymidi@3.2.0:
     dependencies:
       '@julusian/midi': 3.6.1
-    optional: true
 
   ecdsa-sig-formatter@1.0.11:
     dependencies:
@@ -2087,8 +2079,7 @@ snapshots:
 
   electron-to-chromium@1.5.340: {}
 
-  emoji-regex@8.0.0:
-    optional: true
+  emoji-regex@8.0.0: {}
 
   engine.io-client@6.5.4:
     dependencies:
@@ -2261,8 +2252,7 @@ snapshots:
 
   gensync@1.0.0-beta.2: {}
 
-  get-caller-file@2.0.5:
-    optional: true
+  get-caller-file@2.0.5: {}
 
   get-tsconfig@4.14.0:
     dependencies:
@@ -2290,8 +2280,7 @@ snapshots:
 
   ipaddr.js@1.9.1: {}
 
-  is-fullwidth-code-point@3.0.0:
-    optional: true
+  is-fullwidth-code-point@3.0.0: {}
 
   js-tokens@4.0.0: {}
 
@@ -2354,8 +2343,7 @@ snapshots:
 
   negotiator@0.6.3: {}
 
-  node-addon-api@6.1.0:
-    optional: true
+  node-addon-api@6.1.0: {}
 
   node-domexception@1.0.0: {}
 
@@ -2405,7 +2393,6 @@ snapshots:
   pkg-prebuilds@1.0.0:
     dependencies:
       yargs: 17.7.2
-    optional: true
 
   postcss@8.5.10:
     dependencies:
@@ -2469,8 +2456,7 @@ snapshots:
 
   real-require@0.2.0: {}
 
-  require-directory@2.1.1:
-    optional: true
+  require-directory@2.1.1: {}
 
   require-from-string@2.0.2: {}
 
@@ -2595,12 +2581,10 @@ snapshots:
       emoji-regex: 8.0.0
       is-fullwidth-code-point: 3.0.0
       strip-ansi: 6.0.1
-    optional: true
 
   strip-ansi@6.0.1:
     dependencies:
       ansi-regex: 5.0.1
-    optional: true
 
   thread-stream@3.1.0:
     dependencies:
@@ -2709,7 +2693,6 @@ snapshots:
       ansi-styles: 4.3.0
       string-width: 4.2.3
       strip-ansi: 6.0.1
-    optional: true
 
   ws@8.17.1: {}
 
@@ -2719,13 +2702,11 @@ snapshots:
 
   xstate@5.18.2: {}
 
-  y18n@5.0.8:
-    optional: true
+  y18n@5.0.8: {}
 
   yallist@3.1.1: {}
 
-  yargs-parser@21.1.1:
-    optional: true
+  yargs-parser@21.1.1: {}
 
   yargs@17.7.2:
     dependencies:
@@ -2736,4 +2717,3 @@ snapshots:
       string-width: 4.2.3
       y18n: 5.0.8
       yargs-parser: 21.1.1
-    optional: true
