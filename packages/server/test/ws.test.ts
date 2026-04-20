@@ -96,7 +96,7 @@ describe("Socket.io /session", () => {
     intro.close();
   });
 
-  it("intro SETUP_DONE broadcasts roundLoading to intro + playerA + playerB", async () => {
+  it("intro SETUP_DONE broadcasts playerNaming to intro + playerA + playerB", async () => {
     const intro = connectClient("intro");
     const playerA = connectClient("player", "A");
     const playerB = connectClient("player", "B");
@@ -111,10 +111,10 @@ describe("Socket.io /session", () => {
     intro.emit("client:event", { type: "START" });
     await allSetup;
 
-    const allRoundLoading = Promise.all([
-      nextState(intro, (s) => s.state === "roundLoading"),
-      nextState(playerA, (s) => s.state === "roundLoading"),
-      nextState(playerB, (s) => s.state === "roundLoading"),
+    const allPlayerNaming = Promise.all([
+      nextState(intro, (s) => s.state === "playerNaming"),
+      nextState(playerA, (s) => s.state === "playerNaming"),
+      nextState(playerB, (s) => s.state === "playerNaming"),
     ]);
     intro.emit("client:event", {
       type: "SETUP_DONE",
@@ -123,9 +123,50 @@ describe("Socket.io /session", () => {
           A: { id: "A", name: "Alice" },
           B: { id: "B", name: "Bob" },
         },
-        relationship: "友人",
+        relationship: "友達" as const,
       },
     });
+    await allPlayerNaming;
+
+    intro.close();
+    playerA.close();
+    playerB.close();
+  });
+
+  it("both players submitting player:setup broadcasts roundLoading", async () => {
+    const intro = connectClient("intro");
+    const playerA = connectClient("player", "A");
+    const playerB = connectClient("player", "B");
+
+    await Promise.all([nextState(intro), nextState(playerA), nextState(playerB)]);
+
+    intro.emit("client:event", { type: "START" });
+    await Promise.all([
+      nextState(intro, (s) => s.state === "setup"),
+      nextState(playerA, (s) => s.state === "setup"),
+      nextState(playerB, (s) => s.state === "setup"),
+    ]);
+
+    intro.emit("client:event", {
+      type: "SETUP_DONE",
+      data: {
+        players: { A: { id: "A", name: "" }, B: { id: "B", name: "" } },
+        relationship: "友達" as const,
+      },
+    });
+    await Promise.all([
+      nextState(intro, (s) => s.state === "playerNaming"),
+      nextState(playerA, (s) => s.state === "playerNaming"),
+      nextState(playerB, (s) => s.state === "playerNaming"),
+    ]);
+
+    const allRoundLoading = Promise.all([
+      nextState(intro, (s) => s.state === "roundLoading"),
+      nextState(playerA, (s) => s.state === "roundLoading"),
+      nextState(playerB, (s) => s.state === "roundLoading"),
+    ]);
+    playerA.emit("player:setup", { name: "あきら" });
+    playerB.emit("player:setup", { name: "さくら" });
     await allRoundLoading;
 
     intro.close();
@@ -138,16 +179,34 @@ describe("Socket.io /session", () => {
     // Orchestrator は実スケジューラだが、3s 以下のテスト時間内には発火しないので
     // 手動駆動と競合しない (各 runtime.send 時に cancelPending が走って再スケジュール)。
     const rt = app.sessionRuntime;
+    const roundReady = {
+      type: "ROUND_READY" as const,
+      game: {
+        gameId: "sync-answer" as const,
+        perPlayerConfigs: {
+          A: {
+            question: "Q",
+            choices: ["a", "b", "c", "d"] as [string, string, string, string],
+          },
+          B: {
+            question: "Q",
+            choices: ["a", "b", "c", "d"] as [string, string, string, string],
+          },
+        },
+      },
+    };
     rt.send({ type: "START" });
     rt.send({
       type: "SETUP_DONE",
       data: {
         players: { A: { id: "A", name: "Alice" }, B: { id: "B", name: "Bob" } },
-        relationship: "友人",
+        relationship: "友達",
       },
     });
+    rt.send({ type: "PLAYER_NAMED", playerId: "A", name: "あきら" });
+    rt.send({ type: "PLAYER_NAMED", playerId: "B", name: "さくら" });
     for (const n of [1, 2, 3]) {
-      rt.send({ type: "ROUND_READY" });
+      rt.send(roundReady);
       rt.send({ type: "ROUND_COMPLETE", score: 50, qualitative: `r${n}` });
       if (n < 3) rt.send({ type: "NEXT_ROUND" });
     }
@@ -165,6 +224,153 @@ describe("Socket.io /session", () => {
     expect(rt.get().state).toBe("waiting");
 
     playerA.close();
+    intro.close();
+  });
+
+  it("player:setup from intro is ignored", async () => {
+    const intro = connectClient("intro");
+    const playerA = connectClient("player", "A");
+    const playerB = connectClient("player", "B");
+
+    await Promise.all([nextState(intro), nextState(playerA), nextState(playerB)]);
+
+    intro.emit("client:event", { type: "START" });
+    await Promise.all([
+      nextState(intro, (s) => s.state === "setup"),
+      nextState(playerA, (s) => s.state === "setup"),
+      nextState(playerB, (s) => s.state === "setup"),
+    ]);
+    intro.emit("client:event", {
+      type: "SETUP_DONE",
+      data: {
+        players: { A: { id: "A", name: "" }, B: { id: "B", name: "" } },
+        relationship: "友達" as const,
+      },
+    });
+    await Promise.all([
+      nextState(intro, (s) => s.state === "playerNaming"),
+      nextState(playerA, (s) => s.state === "playerNaming"),
+      nextState(playerB, (s) => s.state === "playerNaming"),
+    ]);
+
+    // intro から player:setup を emit しても無視される
+    (intro as unknown as { emit: (ev: string, p: unknown) => void }).emit(
+      "player:setup",
+      { name: "あきら" },
+    );
+    await new Promise((r) => setTimeout(r, 100));
+    // A が入力されていないので roundLoading に進まない。現状は playerNaming のはず。
+    playerB.emit("player:setup", { name: "さくら" });
+    await new Promise((r) => setTimeout(r, 100));
+    // B だけしか有効に入っていないので state は playerNaming のまま
+    const snap = await new Promise<{ state: string }>((resolve) => {
+      intro.once("session:state", resolve);
+      // 強制的に最新状態を取るため何か emit
+      intro.emit("client:event", { type: "START" }); // waiting 以外では無視される
+    });
+    expect(snap.state).toBe("playerNaming");
+
+    intro.close();
+    playerA.close();
+    playerB.close();
+  });
+
+  it("player:setup with non-string name is ignored", async () => {
+    const intro = connectClient("intro");
+    const playerA = connectClient("player", "A");
+    const playerB = connectClient("player", "B");
+
+    await Promise.all([nextState(intro), nextState(playerA), nextState(playerB)]);
+    intro.emit("client:event", { type: "START" });
+    await Promise.all([
+      nextState(intro, (s) => s.state === "setup"),
+      nextState(playerA, (s) => s.state === "setup"),
+      nextState(playerB, (s) => s.state === "setup"),
+    ]);
+    intro.emit("client:event", {
+      type: "SETUP_DONE",
+      data: {
+        players: { A: { id: "A", name: "" }, B: { id: "B", name: "" } },
+        relationship: "友達" as const,
+      },
+    });
+    await Promise.all([
+      nextState(playerA, (s) => s.state === "playerNaming"),
+    ]);
+
+    // 不正な型 (number) は ignore
+    (playerA as unknown as { emit: (ev: string, p: unknown) => void }).emit(
+      "player:setup",
+      { name: 42 },
+    );
+    await new Promise((r) => setTimeout(r, 100));
+    // B は正しく送る → A 空のまま playerNaming に留まる
+    playerB.emit("player:setup", { name: "さくら" });
+    await new Promise((r) => setTimeout(r, 100));
+
+    intro.close();
+    playerA.close();
+    playerB.close();
+  });
+
+  it("forwards player:input to orchestrator.onPlayerInput", async () => {
+    const calls: Array<{ id: string; input: unknown }> = [];
+    const fakeOrch = {
+      onPlayerInput(id: string, input: unknown) {
+        calls.push({ id, input });
+      },
+    } as unknown as Parameters<typeof attachSocketIo>[2];
+
+    // local app でないと全体と干渉するのでテスト内で個別 boot
+    await app.close();
+    app = buildApp({ orchestrator: null }); // built-in を無効化して外側で attach
+    await app.ready();
+    attachSocketIo(app.server, app.sessionRuntime, fakeOrch);
+    await new Promise<void>((resolve) => app.server.listen(0, resolve));
+    const { port } = app.server.address() as AddressInfo;
+    address = `http://localhost:${port}`;
+
+    const playerA = connectClient("player", "A");
+    await nextState(playerA);
+    playerA.emit("player:input", {
+      round: 1,
+      gameId: "sync-answer",
+      payload: { choice: 1 },
+    });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.id).toBe("A");
+    playerA.close();
+  });
+
+  it("ignores player:input from intro role", async () => {
+    const calls: Array<{ id: string; input: unknown }> = [];
+    const fakeOrch = {
+      onPlayerInput() {
+        calls.push({ id: "unexpected", input: null });
+      },
+    } as unknown as Parameters<typeof attachSocketIo>[2];
+
+    await app.close();
+    app = buildApp({ orchestrator: null });
+    await app.ready();
+    attachSocketIo(app.server, app.sessionRuntime, fakeOrch);
+    await new Promise<void>((resolve) => app.server.listen(0, resolve));
+    const { port } = app.server.address() as AddressInfo;
+    address = `http://localhost:${port}`;
+
+    const intro = connectClient("intro");
+    await nextState(intro);
+    (intro as unknown as { emit: (ev: string, p: unknown) => void }).emit(
+      "player:input",
+      {
+        round: 1,
+        gameId: "sync-answer",
+        payload: { choice: 1 },
+      },
+    );
+    await new Promise((r) => setTimeout(r, 50));
+    expect(calls).toHaveLength(0);
     intro.close();
   });
 

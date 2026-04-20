@@ -29,12 +29,15 @@ describe("SessionRuntime", () => {
       type: "SETUP_DONE",
       data: {
         players: { A: { id: "A", name: "a" }, B: { id: "B", name: "b" } },
-        relationship: "友人",
+        relationship: "友達",
       },
     });
+    rt.send({ type: "PLAYER_NAMED", playerId: "A", name: "あきら" });
+    rt.send({ type: "PLAYER_NAMED", playerId: "B", name: "さくら" });
     unsub();
     expect(received[0]).toBe("waiting");
     expect(received).toContain("setup");
+    expect(received).toContain("playerNaming");
     expect(received).toContain("roundLoading");
   });
 

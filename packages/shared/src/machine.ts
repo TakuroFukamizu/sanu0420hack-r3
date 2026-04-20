@@ -1,14 +1,17 @@
 import { assign, setup } from "xstate";
 import type {
+  PlayerId,
   RoundNumber,
   SessionSnapshot,
   SessionStateName,
   SetupData,
 } from "./types.js";
+import type { CurrentGame } from "./games/registry.js";
 
 export interface SessionContext {
   setup: SetupData | null;
   currentRound: RoundNumber | null;
+  currentGame: CurrentGame | null;
   scores: Record<RoundNumber, number | null>;
   qualitativeEvals: Record<RoundNumber, string | null>;
   finalVerdict: string[] | null;
@@ -17,7 +20,8 @@ export interface SessionContext {
 export type SessionEvent =
   | { type: "START" }
   | { type: "SETUP_DONE"; data: SetupData }
-  | { type: "ROUND_READY" }
+  | { type: "PLAYER_NAMED"; playerId: PlayerId; name: string }
+  | { type: "ROUND_READY"; game: CurrentGame }
   | { type: "ROUND_COMPLETE"; score: number; qualitative: string }
   | { type: "NEXT_ROUND" }
   | { type: "SESSION_DONE"; verdict: string[] }
@@ -26,6 +30,7 @@ export type SessionEvent =
 const initialContext: SessionContext = {
   setup: null,
   currentRound: null,
+  currentGame: null,
   scores: { 1: null, 2: null, 3: null },
   qualitativeEvals: { 1: null, 2: null, 3: null },
   finalVerdict: null,
@@ -39,8 +44,34 @@ export const sessionMachine = setup({
   actions: {
     applySetup: assign(({ event }) => {
       if (event.type !== "SETUP_DONE") return {};
-      return { setup: event.data, currentRound: 1 as RoundNumber };
+      // 仕様: 名前は setup では保持せず、playerNaming で埋める。
+      // stale / 手打ちクライアントから非空が来ても強制的に "" に正規化する。
+      const normalized: SetupData = {
+        relationship: event.data.relationship,
+        players: {
+          A: { id: "A", name: "" },
+          B: { id: "B", name: "" },
+        },
+      };
+      return { setup: normalized };
     }),
+    applyPlayerName: assign(({ context, event }) => {
+      if (event.type !== "PLAYER_NAMED") return {};
+      if (!context.setup) return {};
+      const trimmed = event.name.trim().slice(0, 16);
+      if (trimmed === "") return {};
+      const current = context.setup.players[event.playerId];
+      return {
+        setup: {
+          ...context.setup,
+          players: {
+            ...context.setup.players,
+            [event.playerId]: { ...current, name: trimmed },
+          },
+        },
+      };
+    }),
+    enterRound1: assign({ currentRound: () => 1 as RoundNumber }),
     recordRound: assign(({ context, event }) => {
       if (event.type !== "ROUND_COMPLETE") return {};
       const r = context.currentRound;
@@ -59,11 +90,19 @@ export const sessionMachine = setup({
       if (event.type !== "SESSION_DONE") return {};
       return { finalVerdict: event.verdict };
     }),
+    applyGame: assign(({ event }) => {
+      if (event.type !== "ROUND_READY") return {};
+      return { currentGame: event.game };
+    }),
     reset: assign(() => initialContext),
   },
   guards: {
     canAdvanceRound: ({ context }) =>
       context.currentRound !== null && context.currentRound < 3,
+    bothPlayersNamed: ({ context }) =>
+      !!context.setup &&
+      context.setup.players.A.name !== "" &&
+      context.setup.players.B.name !== "",
   },
 }).createMachine({
   id: "session",
@@ -76,16 +115,31 @@ export const sessionMachine = setup({
     setup: {
       on: {
         SETUP_DONE: {
-          target: "active.roundLoading",
+          target: "playerNaming",
           actions: "applySetup",
         },
+      },
+    },
+    playerNaming: {
+      on: {
+        PLAYER_NAMED: { actions: "applyPlayerName" },
+      },
+      always: {
+        guard: "bothPlayersNamed",
+        target: "active.roundLoading",
+        actions: "enterRound1",
       },
     },
     active: {
       initial: "roundLoading",
       states: {
         roundLoading: {
-          on: { ROUND_READY: "roundPlaying" },
+          on: {
+            ROUND_READY: {
+              target: "roundPlaying",
+              actions: "applyGame",
+            },
+          },
         },
         roundPlaying: {
           on: {
@@ -127,6 +181,7 @@ function flattenValue(value: unknown): SessionStateName {
   if (typeof value === "string") {
     if (value === "waiting") return "waiting";
     if (value === "setup") return "setup";
+    if (value === "playerNaming") return "playerNaming";
     if (value === "totalResult") return "totalResult";
   }
   if (value && typeof value === "object" && "active" in value) {
@@ -143,6 +198,7 @@ export function snapshotToDTO(snap: AnyActorSnapshot): SessionSnapshot {
   return {
     state: flattenValue(snap.value),
     currentRound: ctx.currentRound,
+    currentGame: ctx.currentGame,
     setup: ctx.setup,
     scores: ctx.scores,
     qualitativeEvals: ctx.qualitativeEvals,

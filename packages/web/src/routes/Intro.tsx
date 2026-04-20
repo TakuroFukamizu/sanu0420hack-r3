@@ -3,6 +3,7 @@ import type { ClientEvent, SessionSnapshot } from "@app/shared";
 import { connectIntroSocket, type AppSocket } from "../net/socket.js";
 import { StartView } from "../views/intro/StartView.js";
 import { SetupView } from "../views/intro/SetupView.js";
+import { PlayerNamingWaitView } from "../views/intro/PlayerNamingWaitView.js";
 import { GuideView } from "../views/intro/GuideView.js";
 import { FinishView } from "../views/intro/FinishView.js";
 
@@ -31,6 +32,10 @@ export function Intro() {
       return <StartView onStart={() => trigger({ type: "START" })} />;
     case "setup":
       return <SetupView onSubmit={(data) => trigger({ type: "SETUP_DONE", data })} />;
+    case "playerNaming": {
+      if (!snap.setup) return null;
+      return <PlayerNamingWaitView setup={snap.setup} />;
+    }
     case "roundLoading":
     case "roundPlaying":
     case "roundResult":

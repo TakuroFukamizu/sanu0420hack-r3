@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { PlayerId, SessionSnapshot } from "@app/shared";
-import { connectPlayerSocket, type AppSocket } from "../net/socket.js";
+import { connectPlayerSocket, emitPlayerInput, type AppSocket } from "../net/socket.js";
 import { useViewport } from "../hooks/useViewport.js";
 import { WaitingView } from "../views/player/WaitingView.js";
+import { NamingView } from "../views/player/NamingView.js";
 import { LoadingView } from "../views/player/LoadingView.js";
 import { GameView } from "../views/player/GameView.js";
 import { RoundResultView } from "../views/player/RoundResultView.js";
@@ -41,10 +42,47 @@ export function Player() {
     case "waiting":
     case "setup":
       return <WaitingView playerId={playerId} />;
+    case "playerNaming": {
+      if (!snap.setup) return null;
+      const already = snap.setup.players[playerId].name !== "";
+      if (already) return <WaitingView playerId={playerId} />;
+      return (
+        <NamingView
+          playerId={playerId}
+          onSubmit={(name) => {
+            const s = socketRef.current;
+            s?.emit("player:setup", { name });
+          }}
+        />
+      );
+    }
     case "roundLoading":
       return <LoadingView round={snap.currentRound} />;
-    case "roundPlaying":
-      return <GameView round={snap.currentRound} />;
+    case "roundPlaying": {
+      const r = snap.currentRound;
+      return (
+        <GameView
+          playerId={playerId}
+          round={r}
+          currentGame={snap.currentGame}
+          onSyncAnswer={(choice) => {
+            const s = socketRef.current;
+            if (r === null || !s) return;
+            emitPlayerInput(s, r, { gameId: "sync-answer", payload: { choice } });
+          }}
+          onPartnerQuiz={(choice) => {
+            const s = socketRef.current;
+            if (r === null || !s) return;
+            emitPlayerInput(s, r, { gameId: "partner-quiz", payload: { choice } });
+          }}
+          onTimingSync={(tapTime) => {
+            const s = socketRef.current;
+            if (r === null || !s) return;
+            emitPlayerInput(s, r, { gameId: "timing-sync", payload: { tapTime } });
+          }}
+        />
+      );
+    }
     case "roundResult": {
       const r = snap.currentRound;
       const score = r !== null ? snap.scores[r] : null;
