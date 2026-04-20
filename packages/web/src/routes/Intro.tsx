@@ -32,7 +32,8 @@ export function Intro() {
     case "setup":
       return <SetupView onSubmit={(data) => trigger({ type: "SETUP_DONE", data })} />;
     case "playerNaming":
-      return <SetupView onSubmit={(data) => trigger({ type: "SETUP_DONE", data })} />;
+      // TODO(Task 10): PlayerNamingWaitView に置き換える。今は typecheck 緑維持のみの stub
+      return null;
     case "roundLoading":
     case "roundPlaying":
     case "roundResult":

@@ -23,6 +23,7 @@ export function SetupView({ onSubmit }: Props) {
         A: { id: "A", name: nameA.trim() },
         B: { id: "B", name: nameB.trim() },
       },
+      // TEMP(Task 9): この SetupView は 4-button 版に全置換される。それまでの typecheck 緑維持のため as Relationship で通す
       relationship: relationship.trim() as Relationship,
     });
   }
