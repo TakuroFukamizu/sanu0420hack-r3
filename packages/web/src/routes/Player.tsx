@@ -2,6 +2,11 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { PlayerId, SessionSnapshot } from "@app/shared";
 import { connectPlayerSocket } from "../net/socket.js";
+import { WaitingView } from "../views/player/WaitingView.js";
+import { LoadingView } from "../views/player/LoadingView.js";
+import { GameView } from "../views/player/GameView.js";
+import { RoundResultView } from "../views/player/RoundResultView.js";
+import { TotalResultView } from "../views/player/TotalResultView.js";
 
 export function Player() {
   const [params] = useSearchParams();
@@ -13,7 +18,7 @@ export function Player() {
 
   useEffect(() => {
     if (!playerId) {
-      setErr("?id=A or ?id=B が必要です");
+      setErr("?id=A または ?id=B のクエリが必要です");
       return;
     }
     const s = connectPlayerSocket(playerId);
@@ -24,31 +29,23 @@ export function Player() {
     };
   }, [playerId]);
 
-  if (err) return <main style={{ padding: 32, color: "red" }}>{err}</main>;
-  if (!snap) return <main style={{ padding: 32 }}>connecting...</main>;
+  if (err) return <main className="error-screen">{err}</main>;
+  if (!snap || !playerId) return <main className="loading-screen">connecting...</main>;
 
-  return (
-    <main style={{ padding: 32, fontFamily: "sans-serif" }}>
-      <h1>Player {playerId}</h1>
-      <p>
-        state: <code>{snap.state}</code>
-      </p>
-      <p>current round: {snap.currentRound ?? "-"}</p>
-      {snap.state === "waiting" && <p>スタート待ち…</p>}
-      {snap.state === "setup" && <p>セットアップ中…</p>}
-      {snap.state === "roundLoading" && <p>Round {snap.currentRound} 準備中…</p>}
-      {snap.state === "roundPlaying" && <p>Round {snap.currentRound} プレイ中 (ゲーム本体は Phase 4)</p>}
-      {snap.state === "roundResult" && (
-        <p>
-          Round {snap.currentRound} 終了。score =
-          {snap.currentRound ? snap.scores[snap.currentRound] : "-"}
-        </p>
-      )}
-      {snap.state === "totalResult" && <p>最終結果: {snap.finalVerdict}</p>}
-      <details style={{ marginTop: 32 }}>
-        <summary>debug snapshot</summary>
-        <pre>{JSON.stringify(snap, null, 2)}</pre>
-      </details>
-    </main>
-  );
+  switch (snap.state) {
+    case "waiting":
+    case "setup":
+      return <WaitingView playerId={playerId} />;
+    case "roundLoading":
+      return <LoadingView round={snap.currentRound} />;
+    case "roundPlaying":
+      return <GameView round={snap.currentRound} />;
+    case "roundResult": {
+      const r = snap.currentRound;
+      const score = r ? snap.scores[r] : null;
+      return <RoundResultView round={r} score={score} />;
+    }
+    case "totalResult":
+      return <TotalResultView verdict={snap.finalVerdict} />;
+  }
 }
