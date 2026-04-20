@@ -906,16 +906,9 @@ git commit -m "feat(web): split Player into views + Waiting/Loading visuals"
 Run: `pnpm -r test && pnpm -r typecheck`
 Expected: 全 PASS。
 
-- [ ] **Step 2: (任意) `.env` で `PLAYER_URL_A/B` を指定**
+- [ ] **Step 2: `PLAYER_URL_A/B` の渡し方**
 
-`packages/server/.env` を作成 (動作確認用、コミットしない):
-
-```
-PLAYER_URL_A=http://localhost:5173/player?id=A
-PLAYER_URL_B=http://localhost:5173/player?id=B
-```
-
-> 現状 `buildApp` は dotenv を読み込まない。env を使いたい場合は一時的に `PLAYER_URL_A=... PLAYER_URL_B=... pnpm --filter @app/server dev` として起動する。dotenv統合は Phase 5 で入れる予定。
+本Phaseでは dotenv を導入しない (Phase 5 で入れる予定)。env はシェル経由で直接渡す。`.env` ファイルは作らない。
 
 - [ ] **Step 3: サーバと Web を並行起動**
 
@@ -946,7 +939,16 @@ Expected:
 - ウィンドウ1: Setup フォーム画面に切り替わる (名前2つ + 関係性)
 - ウィンドウ2/3: **変化なし** (まだ Waiting のまま。state は `setup` になるが Player の投影では `waiting|setup → WaitingView` なので表示は同じ)
 
-- [ ] **Step 6: Setup フォーム送信 → Guide + player 自動 Loading**
+- [ ] **Step 6: Setup フォーム入力検証 (送信前に実施)**
+
+Setup 画面で以下を確認する:
+- 3つのフィールド (Player A 名前 / Player B 名前 / 関係性) のいずれかが空欄のままだと「次へ」ボタンが **disabled**
+- 3つすべて入力すると enabled に切り替わる
+- 入力後、いずれかのフィールドを空に戻すと再度 disabled になる
+
+検証が済んだら次のステップで実際に送信する。
+
+- [ ] **Step 7: Setup フォーム送信 → Guide + player 自動 Loading**
 
 ウィンドウ1 で:
 - Player A の名前に "あきら"
@@ -961,13 +963,7 @@ Expected (同時に起こる):
 
 これで本Phaseの核心要件 "Setup→Guide の intro 遷移と同時に、player が自動で Loading に遷移する" が視認できる。
 
-- [ ] **Step 7: フォーム検証の確認**
-
-`RESET` がまだ押せないので、ブラウザを一度リロードして初期状態 (`waiting`) に戻し、もう一度 Setup に入る。
-- 3つのフィールドのどれか1つを空にして「次へ」が disabled のままであることを確認
-- 全部埋めると enabled になることを確認
-
-> 注: リロードすると intro は再接続するが、サーバの state は既に `roundLoading` になっている。そのまま開き直すと Guide が表示される。完全リセットは Phase 3 で orchestrator から `SESSION_DONE` → Finish → RESET を流して確認する。Phase 2 ではここまでで十分。
+> 注: Phase 2 時点では完全リセット (`totalResult → waiting`) は orchestrator 未実装のため発動できない。リロードするとサーバは `roundLoading` のままなので intro は Guide が再表示される。完全リセットの手動確認は Phase 3 で orchestrator から `SESSION_DONE` → Finish → RESET を流せるようになってから行う。
 
 - [ ] **Step 8: Commit (最終)**
 
