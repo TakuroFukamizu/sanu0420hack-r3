@@ -1,4 +1,7 @@
 import type {
+  CurrentGame,
+  PlayerId,
+  PlayerInput,
   RoundNumber,
   SessionSnapshot,
   SessionStateName,
@@ -10,10 +13,15 @@ import {
   ROUND_LOADING_ENV,
   ROUND_PLAYING_ENV,
   ROUND_RESULT_ENV,
+  scoreGame,
 } from "@app/shared";
 import type { SessionRuntime } from "../session-runtime.js";
 import { realScheduler, type Scheduler } from "./scheduler.js";
-import { mockQualitative, mockScore, mockVerdict } from "./mock.js";
+import {
+  genPerPlayerConfigs,
+  mockVerdict,
+  pickGameForRound,
+} from "./mock.js";
 
 export interface OrchestratorDurations {
   roundLoadingMs: number;
@@ -41,6 +49,9 @@ export class Orchestrator {
   private cancelPending: (() => void) | null = null;
   private lastState: SessionStateName | null = null;
 
+  /** 現在ラウンドのプレイヤー入力 payload を蓄積する。roundPlaying エントリ時にクリア。*/
+  private inputs: Partial<Record<PlayerId, unknown>> = {};
+
   constructor(
     private runtime: SessionRuntime,
     private scheduler: Scheduler = realScheduler,
@@ -58,6 +69,30 @@ export class Orchestrator {
     this.unsubscribe?.();
     this.unsubscribe = null;
     this.lastState = null;
+    this.inputs = {};
+  }
+
+  /** ws.ts から forward される。roundPlaying 以外は無視。両者揃ったら即 complete。*/
+  onPlayerInput(playerId: PlayerId, input: PlayerInput): void {
+    const snap = this.runtime.get();
+    if (snap.state !== "roundPlaying") return;
+    if (!snap.currentGame) return;
+    if (input.round !== snap.currentRound) return;
+    if (input.gameId !== snap.currentGame.gameId) return;
+
+    this.inputs[playerId] = input.payload;
+
+    if (this.inputs.A !== undefined && this.inputs.B !== undefined) {
+      this.cancelPending?.();
+      this.cancelPending = null;
+      this.completeRound(snap.currentGame);
+    }
+  }
+
+  private completeRound(current: CurrentGame): void {
+    const { score, qualitative } = scoreGame(current, this.inputs);
+    this.inputs = {};
+    this.runtime.send({ type: "ROUND_COMPLETE", score, qualitative });
   }
 
   private onState(snap: SessionSnapshot): void {
@@ -71,20 +106,18 @@ export class Orchestrator {
       case "roundLoading":
         this.cancelPending = this.scheduler.schedule(
           this.durations.roundLoadingMs,
-          () => {
-            this.runtime.send({ type: "ROUND_READY" });
-          },
+          () => this.emitRoundReady(),
         );
         return;
       case "roundPlaying":
+        // ROUND_READY 側で currentGame が context にセットされている前提
+        this.inputs = {};
         this.cancelPending = this.scheduler.schedule(
           this.durations.roundPlayingMs,
           () => {
-            this.runtime.send({
-              type: "ROUND_COMPLETE",
-              score: mockScore(),
-              qualitative: mockQualitative(),
-            });
+            const cur = this.runtime.get().currentGame;
+            if (!cur) return;
+            this.completeRound(cur);
           },
         );
         return;
@@ -112,5 +145,17 @@ export class Orchestrator {
       case "totalResult":
         return;
     }
+  }
+
+  private emitRoundReady(): void {
+    const snap = this.runtime.get();
+    if (!snap.setup || snap.currentRound === null) return;
+    const gameId = pickGameForRound(snap.currentRound);
+    const game = genPerPlayerConfigs(gameId, snap.setup);
+    this.runtime.send({
+      type: "ROUND_READY",
+      gameId: game.gameId,
+      perPlayerConfigs: game.perPlayerConfigs,
+    });
   }
 }

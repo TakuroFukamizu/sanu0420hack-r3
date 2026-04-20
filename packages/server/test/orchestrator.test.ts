@@ -95,7 +95,55 @@ describe("Orchestrator", () => {
     orch.stop();
     expect(sched.pendingCount).toBe(0);
 
-    rt.send({ type: "ROUND_READY" });
+    rt.send({
+      type: "ROUND_READY",
+      gameId: "sync-answer",
+      perPlayerConfigs: {
+        A: { question: "Q", choices: ["a", "b", "c", "d"] },
+        B: { question: "Q", choices: ["a", "b", "c", "d"] },
+      },
+    });
     expect(sched.pendingCount).toBe(0);
+  });
+
+  it("completes a round immediately when both players submit input", () => {
+    completeSetupAndNaming(rt); // -> roundLoading
+    sched.runAll(); // roundLoading timer -> ROUND_READY -> roundPlaying
+    expect(rt.get().state).toBe("roundPlaying");
+    const current = rt.get().currentGame;
+    expect(current?.gameId).toBe("sync-answer");
+
+    // 両者 input: sync-answer の場合は { choice: 0..3 }
+    orch.onPlayerInput("A", {
+      round: 1,
+      gameId: current!.gameId,
+      payload: { choice: 0 },
+    });
+    expect(rt.get().state).toBe("roundPlaying"); // 1人だけではまだ
+    orch.onPlayerInput("B", {
+      round: 1,
+      gameId: current!.gameId,
+      payload: { choice: 0 },
+    });
+    expect(rt.get().state).toBe("roundResult");
+    expect(rt.get().scores[1]).toBe(100); // 同じ choice なら 100
+    expect(rt.get().qualitativeEvals[1]).toBeTypeOf("string");
+    // 旧 timer は cancel されているはずなので pending も 1 本 (roundResult の timer) だけ
+    expect(sched.pendingCount).toBe(1);
+  });
+
+  it("completes a round with partial input on timeout", () => {
+    completeSetupAndNaming(rt); // -> roundLoading
+    sched.runAll(); // -> roundPlaying
+    const current = rt.get().currentGame!;
+    orch.onPlayerInput("A", {
+      round: 1,
+      gameId: current.gameId,
+      payload: { choice: 2 },
+    });
+    // B が入れないままタイムアップ
+    sched.runAll();
+    expect(rt.get().state).toBe("roundResult");
+    expect(rt.get().scores[1]).toBe(0); // 片方だけなので scoreFn の fallback
   });
 });
