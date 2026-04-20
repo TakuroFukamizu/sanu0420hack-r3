@@ -108,6 +108,7 @@ export class Orchestrator {
       }
       case "waiting":
       case "setup":
+      case "playerNaming":
       case "totalResult":
         return;
     }

@@ -96,7 +96,7 @@ describe("Socket.io /session", () => {
     intro.close();
   });
 
-  it("intro SETUP_DONE broadcasts roundLoading to intro + playerA + playerB", async () => {
+  it("intro SETUP_DONE broadcasts playerNaming to intro + playerA + playerB", async () => {
     const intro = connectClient("intro");
     const playerA = connectClient("player", "A");
     const playerB = connectClient("player", "B");
@@ -111,10 +111,10 @@ describe("Socket.io /session", () => {
     intro.emit("client:event", { type: "START" });
     await allSetup;
 
-    const allRoundLoading = Promise.all([
-      nextState(intro, (s) => s.state === "roundLoading"),
-      nextState(playerA, (s) => s.state === "roundLoading"),
-      nextState(playerB, (s) => s.state === "roundLoading"),
+    const allPlayerNaming = Promise.all([
+      nextState(intro, (s) => s.state === "playerNaming"),
+      nextState(playerA, (s) => s.state === "playerNaming"),
+      nextState(playerB, (s) => s.state === "playerNaming"),
     ]);
     intro.emit("client:event", {
       type: "SETUP_DONE",
@@ -126,7 +126,7 @@ describe("Socket.io /session", () => {
         relationship: "友達" as const,
       },
     });
-    await allRoundLoading;
+    await allPlayerNaming;
 
     intro.close();
     playerA.close();

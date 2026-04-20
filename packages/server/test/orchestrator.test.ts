@@ -14,6 +14,13 @@ function setupData(): SetupData {
   };
 }
 
+function completeSetupAndNaming(rt: SessionRuntime) {
+  rt.send({ type: "START" });
+  rt.send({ type: "SETUP_DONE", data: setupData() });
+  rt.send({ type: "PLAYER_NAMED", playerId: "A", name: "あきら" });
+  rt.send({ type: "PLAYER_NAMED", playerId: "B", name: "さくら" });
+}
+
 describe("Orchestrator", () => {
   let rt: SessionRuntime;
   let sched: FakeScheduler;
@@ -37,9 +44,15 @@ describe("Orchestrator", () => {
     expect(sched.pendingCount).toBe(0);
   });
 
-  it("schedules ROUND_READY when entering roundLoading", () => {
+  it("does not schedule while playerNaming", () => {
     rt.send({ type: "START" });
     rt.send({ type: "SETUP_DONE", data: setupData() });
+    expect(rt.get().state).toBe("playerNaming");
+    expect(sched.pendingCount).toBe(0);
+  });
+
+  it("schedules ROUND_READY when entering roundLoading", () => {
+    completeSetupAndNaming(rt);
     expect(rt.get().state).toBe("roundLoading");
     expect(sched.pendingCount).toBe(1);
 
@@ -48,8 +61,7 @@ describe("Orchestrator", () => {
   });
 
   it("runs a full 3-round cycle to totalResult", () => {
-    rt.send({ type: "START" });
-    rt.send({ type: "SETUP_DONE", data: setupData() });
+    completeSetupAndNaming(rt);
     // 9 schedule tasks drive the full cycle (see plan for enumeration).
     for (let i = 0; i < 9; i++) {
       expect(sched.pendingCount).toBe(1);
@@ -69,8 +81,7 @@ describe("Orchestrator", () => {
   });
 
   it("does not schedule additional timers in totalResult or waiting", () => {
-    rt.send({ type: "START" });
-    rt.send({ type: "SETUP_DONE", data: setupData() });
+    completeSetupAndNaming(rt);
     for (let i = 0; i < 9; i++) sched.runAll();
     expect(rt.get().state).toBe("totalResult");
     rt.send({ type: "RESET" });
@@ -79,8 +90,7 @@ describe("Orchestrator", () => {
   });
 
   it("stop() cancels pending timers and detaches listener", () => {
-    rt.send({ type: "START" });
-    rt.send({ type: "SETUP_DONE", data: setupData() });
+    completeSetupAndNaming(rt);
     expect(sched.pendingCount).toBe(1);
     orch.stop();
     expect(sched.pendingCount).toBe(0);
