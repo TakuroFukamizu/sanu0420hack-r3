@@ -1,0 +1,22 @@
+{
+  "name": "@app/server",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@app/shared": "workspace:*",
+    "fastify": "5.0.0",
+    "socket.io": "4.7.5"
+  },
+  "devDependencies": {
+    "tsx": "4.19.1",
+    "socket.io-client": "4.7.5"
+  }
+}
