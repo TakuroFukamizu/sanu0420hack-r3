@@ -75,6 +75,15 @@ export function attachSocketIo(
       if (socket.data.role !== "player") return;
       // Phase 4 で実装 (オーケストレータへ委譲)
     });
+
+    socket.on("player:setup", (payload: unknown) => {
+      if (socket.data.role !== "player") return;
+      const playerId = socket.data.playerId;
+      if (playerId !== "A" && playerId !== "B") return;
+      const name = (payload as { name?: unknown })?.name;
+      if (typeof name !== "string") return;
+      runtime.send({ type: "PLAYER_NAMED", playerId, name });
+    });
   });
 
   return {

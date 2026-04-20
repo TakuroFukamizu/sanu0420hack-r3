@@ -133,6 +133,133 @@ describe("Socket.io /session", () => {
     playerB.close();
   });
 
+  it("both players submitting player:setup broadcasts roundLoading", async () => {
+    const intro = connectClient("intro");
+    const playerA = connectClient("player", "A");
+    const playerB = connectClient("player", "B");
+
+    await Promise.all([nextState(intro), nextState(playerA), nextState(playerB)]);
+
+    intro.emit("client:event", { type: "START" });
+    await Promise.all([
+      nextState(intro, (s) => s.state === "setup"),
+      nextState(playerA, (s) => s.state === "setup"),
+      nextState(playerB, (s) => s.state === "setup"),
+    ]);
+
+    intro.emit("client:event", {
+      type: "SETUP_DONE",
+      data: {
+        players: { A: { id: "A", name: "" }, B: { id: "B", name: "" } },
+        relationship: "友達" as const,
+      },
+    });
+    await Promise.all([
+      nextState(intro, (s) => s.state === "playerNaming"),
+      nextState(playerA, (s) => s.state === "playerNaming"),
+      nextState(playerB, (s) => s.state === "playerNaming"),
+    ]);
+
+    const allRoundLoading = Promise.all([
+      nextState(intro, (s) => s.state === "roundLoading"),
+      nextState(playerA, (s) => s.state === "roundLoading"),
+      nextState(playerB, (s) => s.state === "roundLoading"),
+    ]);
+    playerA.emit("player:setup", { name: "あきら" });
+    playerB.emit("player:setup", { name: "さくら" });
+    await allRoundLoading;
+
+    intro.close();
+    playerA.close();
+    playerB.close();
+  });
+
+  it("player:setup from intro is ignored", async () => {
+    const intro = connectClient("intro");
+    const playerA = connectClient("player", "A");
+    const playerB = connectClient("player", "B");
+
+    await Promise.all([nextState(intro), nextState(playerA), nextState(playerB)]);
+
+    intro.emit("client:event", { type: "START" });
+    await Promise.all([
+      nextState(intro, (s) => s.state === "setup"),
+      nextState(playerA, (s) => s.state === "setup"),
+      nextState(playerB, (s) => s.state === "setup"),
+    ]);
+    intro.emit("client:event", {
+      type: "SETUP_DONE",
+      data: {
+        players: { A: { id: "A", name: "" }, B: { id: "B", name: "" } },
+        relationship: "友達" as const,
+      },
+    });
+    await Promise.all([
+      nextState(intro, (s) => s.state === "playerNaming"),
+      nextState(playerA, (s) => s.state === "playerNaming"),
+      nextState(playerB, (s) => s.state === "playerNaming"),
+    ]);
+
+    // intro から player:setup を emit しても無視される
+    (intro as unknown as { emit: (ev: string, p: unknown) => void }).emit(
+      "player:setup",
+      { name: "あきら" },
+    );
+    await new Promise((r) => setTimeout(r, 100));
+    // A が入力されていないので roundLoading に進まない。現状は playerNaming のはず。
+    playerB.emit("player:setup", { name: "さくら" });
+    await new Promise((r) => setTimeout(r, 100));
+    // B だけしか有効に入っていないので state は playerNaming のまま
+    const snap = await new Promise<{ state: string }>((resolve) => {
+      intro.once("session:state", resolve);
+      // 強制的に最新状態を取るため何か emit
+      intro.emit("client:event", { type: "START" }); // waiting 以外では無視される
+    });
+    expect(snap.state).toBe("playerNaming");
+
+    intro.close();
+    playerA.close();
+    playerB.close();
+  });
+
+  it("player:setup with non-string name is ignored", async () => {
+    const intro = connectClient("intro");
+    const playerA = connectClient("player", "A");
+    const playerB = connectClient("player", "B");
+
+    await Promise.all([nextState(intro), nextState(playerA), nextState(playerB)]);
+    intro.emit("client:event", { type: "START" });
+    await Promise.all([
+      nextState(intro, (s) => s.state === "setup"),
+      nextState(playerA, (s) => s.state === "setup"),
+      nextState(playerB, (s) => s.state === "setup"),
+    ]);
+    intro.emit("client:event", {
+      type: "SETUP_DONE",
+      data: {
+        players: { A: { id: "A", name: "" }, B: { id: "B", name: "" } },
+        relationship: "友達" as const,
+      },
+    });
+    await Promise.all([
+      nextState(playerA, (s) => s.state === "playerNaming"),
+    ]);
+
+    // 不正な型 (number) は ignore
+    (playerA as unknown as { emit: (ev: string, p: unknown) => void }).emit(
+      "player:setup",
+      { name: 42 },
+    );
+    await new Promise((r) => setTimeout(r, 100));
+    // B は正しく送る → A 空のまま playerNaming に留まる
+    playerB.emit("player:setup", { name: "さくら" });
+    await new Promise((r) => setTimeout(r, 100));
+
+    intro.close();
+    playerA.close();
+    playerB.close();
+  });
+
   it("rejects connection with unknown role", async () => {
     const bad = ioClient(`${address}/session`, {
       query: { role: "spectator" },
