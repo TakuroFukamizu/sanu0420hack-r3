@@ -17,10 +17,16 @@ function isValidPlayerId(x: unknown): x is PlayerId {
   return x === "A" || x === "B";
 }
 
+export interface AttachedIo {
+  io: IOServer;
+  /** runtime→broadcast の購読を解除し、Socket.io サーバを閉じる */
+  close: () => Promise<void>;
+}
+
 export function attachSocketIo(
   httpServer: HttpServer,
   runtime: SessionRuntime,
-): IOServer {
+): AttachedIo {
   const io = new IOServer<ClientToServerEvents, ServerToClientEvents>(
     httpServer,
     { cors: { origin: true, credentials: true } },
@@ -28,10 +34,10 @@ export function attachSocketIo(
 
   const nsp = io.of("/session");
 
-  // グローバル購読。actor が遷移するたびに接続中の全 socket にbroadcast。
-  // subscribe は登録時に現在値を即時発火するが、起動直後はまだ socket が無いので
-  // broadcast 先が空。以降は遷移のみで発火する。
-  runtime.subscribe((snap) => {
+  // グローバル購読。actor が遷移するたびに接続中の全 socket に broadcast する。
+  // 本関数は 1 runtime につき 1 回だけ呼ばれる前提。ホットリロードや二重呼び出しで
+  // 登録がリークしないよう、返り値の close() で unsubscribe + io.close() を行える。
+  const unsubscribe = runtime.subscribe((snap) => {
     nsp.emit("session:state", snap);
   });
 
@@ -53,7 +59,11 @@ export function attachSocketIo(
     socket.data.role = role;
     socket.data.playerId = role === "player" ? (id as PlayerId) : null;
 
-    // この socket にだけ現在の state を配る (遷移待ちを避けるため)
+    // この socket にだけ現在の state を配る (遷移待ちを避けるため)。
+    // 接続直後 〜 ここまでに actor が遷移した場合、broadcast と本 emit の 2 通が
+    // 届くことがある。どちらも最新 snapshot で冪等なのでクライアントは後勝ちで
+    // 上書きしておけば良い (Phase 2+ で orchestrator がタイマ遷移を撃ち始めると
+    // 目にする可能性が上がる)。
     socket.emit("session:state", runtime.get());
 
     socket.on("client:event", (ev: ClientEvent) => {
@@ -67,5 +77,11 @@ export function attachSocketIo(
     });
   });
 
-  return io;
+  return {
+    io,
+    close: async () => {
+      unsubscribe();
+      await new Promise<void>((resolve) => io.close(() => resolve()));
+    },
+  };
 }
