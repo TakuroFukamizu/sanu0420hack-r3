@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { PlayerId, SessionSnapshot } from "@app/shared";
 import { connectPlayerSocket } from "../net/socket.js";
+import { useViewport } from "../hooks/useViewport.js";
 import { WaitingView } from "../views/player/WaitingView.js";
 import { LoadingView } from "../views/player/LoadingView.js";
 import { GameView } from "../views/player/GameView.js";
@@ -9,6 +10,7 @@ import { RoundResultView } from "../views/player/RoundResultView.js";
 import { TotalResultView } from "../views/player/TotalResultView.js";
 
 export function Player() {
+  useViewport("width=1920");
   const [params] = useSearchParams();
   const rawId = params.get("id");
   const playerId: PlayerId | null = rawId === "A" || rawId === "B" ? rawId : null;
