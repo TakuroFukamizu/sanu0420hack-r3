@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { SessionRuntime } from "../src/session-runtime.js";
 import { Orchestrator } from "../src/orchestrator/index.js";
 import { FakeScheduler } from "../src/orchestrator/scheduler.js";
+import { MockAiGateway } from "../src/ai/mock.js";
 import type { SetupData } from "@app/shared";
 
 function setupData(): SetupData {
@@ -190,5 +191,85 @@ describe("Orchestrator", () => {
     orch.onPlayerInput("A", { round: 1, gameId: "sync-answer" as const, payload: { choice: 3 } });
     expect(rt.get().state).toBe("roundResult");
     expect(rt.get().scores[1]).toBe(scoreBefore);
+  });
+});
+
+describe("Orchestrator with AiGateway injection", () => {
+  let rt: SessionRuntime;
+  let sched: FakeScheduler;
+  let orch: Orchestrator;
+
+  beforeEach(() => {
+    rt = new SessionRuntime();
+    sched = new FakeScheduler();
+  });
+
+  afterEach(() => {
+    orch.stop();
+    rt.stop();
+  });
+
+  it("calls gateway.planSession once at roundLoading round=1", async () => {
+    const calls: string[] = [];
+    const spyGw = new MockAiGateway();
+    const original = spyGw.planSession.bind(spyGw);
+    spyGw.planSession = async (setup) => {
+      calls.push("plan");
+      return original(setup);
+    };
+    orch = new Orchestrator(rt, sched, undefined, { gateway: spyGw });
+    orch.start();
+
+    completeSetupAndNaming(rt);
+    // completeSetupAndNaming で active.roundLoading (round=1) 入りしているので
+    // この時点で planSession は kick off 済み。
+    expect(calls).toEqual(["plan"]);
+
+    // 9 回回して完了 (全 3 ラウンド走破)。途中で planSession が再度呼ばれないことを確認。
+    for (let i = 0; i < 9; i++) await sched.runAll();
+    expect(rt.get().state).toBe("totalResult");
+    expect(calls).toEqual(["plan"]);
+  });
+
+  it("falls back to mock when gateway throws", async () => {
+    class BrokenGateway extends MockAiGateway {
+      readonly name: string = "broken";
+      async planSession(): Promise<never> {
+        throw new Error("boom");
+      }
+      async generateVerdict(): Promise<never> {
+        throw new Error("boom-verdict");
+      }
+    }
+    orch = new Orchestrator(rt, sched, undefined, {
+      gateway: new BrokenGateway(),
+      aiTimeoutMs: 100,
+    });
+    orch.start();
+
+    completeSetupAndNaming(rt);
+    for (let i = 0; i < 9; i++) await sched.runAll();
+    expect(rt.get().state).toBe("totalResult");
+    // mock fallback で currentGame が埋まり、3 ラウンド走破できている。
+    expect(rt.get().scores[3]).not.toBeNull();
+    expect(rt.get().finalVerdict).toBeTypeOf("string");
+  });
+
+  it("uses gateway.generateVerdict for final verdict", async () => {
+    class CannedGateway extends MockAiGateway {
+      readonly name: string = "canned";
+      async generateVerdict(): Promise<string> {
+        return "GEMINI SAYS HELLO";
+      }
+    }
+    orch = new Orchestrator(rt, sched, undefined, {
+      gateway: new CannedGateway(),
+    });
+    orch.start();
+
+    completeSetupAndNaming(rt);
+    for (let i = 0; i < 9; i++) await sched.runAll();
+    expect(rt.get().state).toBe("totalResult");
+    expect(rt.get().finalVerdict).toBe("GEMINI SAYS HELLO");
   });
 });
