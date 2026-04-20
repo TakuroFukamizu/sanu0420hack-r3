@@ -1,3 +1,7 @@
+import type { CurrentGame } from "./games/registry.js";
+
+export type { CurrentGame };
+
 export type PlayerId = "A" | "B";
 export type Role = "intro" | "player";
 export type RoundNumber = 1 | 2 | 3;
@@ -26,6 +30,7 @@ export type SessionStateName =
 export interface SessionSnapshot {
   state: SessionStateName;
   currentRound: RoundNumber | null;
+  currentGame: CurrentGame | null;
   setup: SetupData | null;
   scores: Record<RoundNumber, number | null>;
   qualitativeEvals: Record<RoundNumber, string | null>;

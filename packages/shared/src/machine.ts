@@ -6,10 +6,12 @@ import type {
   SessionStateName,
   SetupData,
 } from "./types.js";
+import type { CurrentGame } from "./games/registry.js";
 
 export interface SessionContext {
   setup: SetupData | null;
   currentRound: RoundNumber | null;
+  currentGame: CurrentGame | null;
   scores: Record<RoundNumber, number | null>;
   qualitativeEvals: Record<RoundNumber, string | null>;
   finalVerdict: string | null;
@@ -19,7 +21,11 @@ export type SessionEvent =
   | { type: "START" }
   | { type: "SETUP_DONE"; data: SetupData }
   | { type: "PLAYER_NAMED"; playerId: PlayerId; name: string }
-  | { type: "ROUND_READY" }
+  | {
+      type: "ROUND_READY";
+      gameId: CurrentGame["gameId"];
+      perPlayerConfigs: CurrentGame["perPlayerConfigs"];
+    }
   | { type: "ROUND_COMPLETE"; score: number; qualitative: string }
   | { type: "NEXT_ROUND" }
   | { type: "SESSION_DONE"; verdict: string }
@@ -28,6 +34,7 @@ export type SessionEvent =
 const initialContext: SessionContext = {
   setup: null,
   currentRound: null,
+  currentGame: null,
   scores: { 1: null, 2: null, 3: null },
   qualitativeEvals: { 1: null, 2: null, 3: null },
   finalVerdict: null,
@@ -87,6 +94,15 @@ export const sessionMachine = setup({
       if (event.type !== "SESSION_DONE") return {};
       return { finalVerdict: event.verdict };
     }),
+    applyGame: assign(({ event }) => {
+      if (event.type !== "ROUND_READY") return {};
+      return {
+        currentGame: {
+          gameId: event.gameId,
+          perPlayerConfigs: event.perPlayerConfigs,
+        } as CurrentGame,
+      };
+    }),
     reset: assign(() => initialContext),
   },
   guards: {
@@ -127,7 +143,12 @@ export const sessionMachine = setup({
       initial: "roundLoading",
       states: {
         roundLoading: {
-          on: { ROUND_READY: "roundPlaying" },
+          on: {
+            ROUND_READY: {
+              target: "roundPlaying",
+              actions: "applyGame",
+            },
+          },
         },
         roundPlaying: {
           on: {
@@ -186,6 +207,7 @@ export function snapshotToDTO(snap: AnyActorSnapshot): SessionSnapshot {
   return {
     state: flattenValue(snap.value),
     currentRound: ctx.currentRound,
+    currentGame: ctx.currentGame,
     setup: ctx.setup,
     scores: ctx.scores,
     qualitativeEvals: ctx.qualitativeEvals,

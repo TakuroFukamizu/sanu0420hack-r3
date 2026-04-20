@@ -12,6 +12,24 @@ function setupData() {
   };
 }
 
+function mockSyncAnswerEvent() {
+  return {
+    type: "ROUND_READY" as const,
+    gameId: "sync-answer" as const,
+    perPlayerConfigs: {
+      A: { question: "Q", choices: ["a", "b", "c", "d"] as [string, string, string, string] },
+      B: { question: "Q", choices: ["a", "b", "c", "d"] as [string, string, string, string] },
+    },
+  };
+}
+
+function driveToRoundLoading(actor: ReturnType<typeof createActor<typeof sessionMachine>>) {
+  actor.send({ type: "START" });
+  actor.send({ type: "SETUP_DONE", data: setupData() });
+  actor.send({ type: "PLAYER_NAMED", playerId: "A", name: "Alice" });
+  actor.send({ type: "PLAYER_NAMED", playerId: "B", name: "Bob" });
+}
+
 describe("sessionMachine", () => {
   it("starts in waiting", () => {
     const actor = createActor(sessionMachine).start();
@@ -115,7 +133,7 @@ describe("sessionMachine", () => {
     actor.send({ type: "SETUP_DONE", data: setupData() });
     actor.send({ type: "PLAYER_NAMED", playerId: "A", name: "あきら" });
     actor.send({ type: "PLAYER_NAMED", playerId: "B", name: "さくら" });
-    actor.send({ type: "ROUND_READY" });
+    actor.send(mockSyncAnswerEvent());
     expect(actor.getSnapshot().value).toEqual({ active: "roundPlaying" });
 
     actor.send({ type: "ROUND_COMPLETE", score: 42, qualitative: "good" });
@@ -134,11 +152,11 @@ describe("sessionMachine", () => {
     actor.send({ type: "PLAYER_NAMED", playerId: "A", name: "あきら" });
     actor.send({ type: "PLAYER_NAMED", playerId: "B", name: "さくら" });
     for (const n of [1, 2]) {
-      actor.send({ type: "ROUND_READY" });
+      actor.send(mockSyncAnswerEvent());
       actor.send({ type: "ROUND_COMPLETE", score: n, qualitative: `r${n}` });
       actor.send({ type: "NEXT_ROUND" });
     }
-    actor.send({ type: "ROUND_READY" });
+    actor.send(mockSyncAnswerEvent());
     actor.send({ type: "ROUND_COMPLETE", score: 3, qualitative: "r3" });
     expect(actor.getSnapshot().value).toEqual({ active: "roundResult" });
     actor.send({ type: "NEXT_ROUND" }); // guard により無視
@@ -153,7 +171,7 @@ describe("sessionMachine", () => {
     actor.send({ type: "PLAYER_NAMED", playerId: "A", name: "あきら" });
     actor.send({ type: "PLAYER_NAMED", playerId: "B", name: "さくら" });
     for (const n of [1, 2, 3]) {
-      actor.send({ type: "ROUND_READY" });
+      actor.send(mockSyncAnswerEvent());
       actor.send({ type: "ROUND_COMPLETE", score: n * 10, qualitative: `r${n}` });
       if (n < 3) actor.send({ type: "NEXT_ROUND" });
     }
@@ -169,7 +187,7 @@ describe("sessionMachine", () => {
     actor.send({ type: "PLAYER_NAMED", playerId: "A", name: "あきら" });
     actor.send({ type: "PLAYER_NAMED", playerId: "B", name: "さくら" });
     for (const n of [1, 2, 3]) {
-      actor.send({ type: "ROUND_READY" });
+      actor.send(mockSyncAnswerEvent());
       actor.send({ type: "ROUND_COMPLETE", score: n, qualitative: `r${n}` });
       if (n < 3) actor.send({ type: "NEXT_ROUND" });
     }
@@ -212,5 +230,44 @@ describe("snapshotToDTO", () => {
       },
     });
     expect(snapshotToDTO(actor.getSnapshot()).state).toBe("playerNaming");
+  });
+});
+
+describe("applyGame action", () => {
+  it("assigns currentGame on ROUND_READY", () => {
+    const actor = createActor(sessionMachine).start();
+    driveToRoundLoading(actor);
+    expect(actor.getSnapshot().context.currentGame).toBeNull();
+    actor.send(mockSyncAnswerEvent());
+    const g = actor.getSnapshot().context.currentGame;
+    expect(g?.gameId).toBe("sync-answer");
+    if (g?.gameId === "sync-answer") {
+      expect(g.perPlayerConfigs.A.question).toBe("Q");
+    }
+  });
+
+  it("RESET clears currentGame", () => {
+    const actor = createActor(sessionMachine).start();
+    driveToRoundLoading(actor);
+    actor.send(mockSyncAnswerEvent());
+    actor.send({ type: "ROUND_COMPLETE", score: 50, qualitative: "x" });
+    for (const n of [2, 3]) {
+      actor.send({ type: "NEXT_ROUND" });
+      actor.send(mockSyncAnswerEvent());
+      actor.send({ type: "ROUND_COMPLETE", score: n, qualitative: "x" });
+    }
+    actor.send({ type: "SESSION_DONE", verdict: "ok" });
+    actor.send({ type: "RESET" });
+    expect(actor.getSnapshot().context.currentGame).toBeNull();
+  });
+});
+
+describe("snapshotToDTO currentGame passthrough", () => {
+  it("reflects currentGame in DTO after ROUND_READY", () => {
+    const actor = createActor(sessionMachine).start();
+    driveToRoundLoading(actor);
+    actor.send(mockSyncAnswerEvent());
+    const dto = snapshotToDTO(actor.getSnapshot());
+    expect(dto.currentGame?.gameId).toBe("sync-answer");
   });
 });
