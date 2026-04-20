@@ -1,6 +1,7 @@
 import type { Server as HttpServer } from "node:http";
 import { Server as IOServer } from "socket.io";
 import type { SessionRuntime } from "./session-runtime.js";
+import type { Orchestrator } from "./orchestrator/index.js";
 import type {
   ClientEvent,
   ClientToServerEvents,
@@ -26,6 +27,7 @@ export interface AttachedIo {
 export function attachSocketIo(
   httpServer: HttpServer,
   runtime: SessionRuntime,
+  orchestrator: Orchestrator | null = null,
 ): AttachedIo {
   const io = new IOServer<ClientToServerEvents, ServerToClientEvents>(
     httpServer,
@@ -71,9 +73,11 @@ export function attachSocketIo(
       runtime.send(ev);
     });
 
-    socket.on("player:input", (_input: PlayerInput) => {
+    socket.on("player:input", (input: PlayerInput) => {
       if (socket.data.role !== "player") return;
-      // Phase 4 で実装 (オーケストレータへ委譲)
+      const id = socket.data.playerId as PlayerId | null;
+      if (!id) return;
+      orchestrator?.onPlayerInput(id, input);
     });
 
     socket.on("player:setup", (payload: unknown) => {

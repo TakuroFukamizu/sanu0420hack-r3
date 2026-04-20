@@ -260,6 +260,67 @@ describe("Socket.io /session", () => {
     playerB.close();
   });
 
+  it("forwards player:input to orchestrator.onPlayerInput", async () => {
+    const calls: Array<{ id: string; input: unknown }> = [];
+    const fakeOrch = {
+      onPlayerInput(id: string, input: unknown) {
+        calls.push({ id, input });
+      },
+    } as unknown as Parameters<typeof attachSocketIo>[2];
+
+    // local app でないと全体と干渉するのでテスト内で個別 boot
+    await app.close();
+    app = buildApp({ orchestrator: null }); // built-in を無効化して外側で attach
+    await app.ready();
+    attachSocketIo(app.server, app.sessionRuntime, fakeOrch);
+    await new Promise<void>((resolve) => app.server.listen(0, resolve));
+    const { port } = app.server.address() as AddressInfo;
+    address = `http://localhost:${port}`;
+
+    const playerA = connectClient("player", "A");
+    await nextState(playerA);
+    playerA.emit("player:input", {
+      round: 1,
+      gameId: "sync-answer",
+      payload: { choice: 1 },
+    });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.id).toBe("A");
+    playerA.close();
+  });
+
+  it("ignores player:input from intro role", async () => {
+    const calls: Array<{ id: string; input: unknown }> = [];
+    const fakeOrch = {
+      onPlayerInput() {
+        calls.push({ id: "unexpected", input: null });
+      },
+    } as unknown as Parameters<typeof attachSocketIo>[2];
+
+    await app.close();
+    app = buildApp({ orchestrator: null });
+    await app.ready();
+    attachSocketIo(app.server, app.sessionRuntime, fakeOrch);
+    await new Promise<void>((resolve) => app.server.listen(0, resolve));
+    const { port } = app.server.address() as AddressInfo;
+    address = `http://localhost:${port}`;
+
+    const intro = connectClient("intro");
+    await nextState(intro);
+    (intro as unknown as { emit: (ev: string, p: unknown) => void }).emit(
+      "player:input",
+      {
+        round: 1,
+        gameId: "sync-answer",
+        payload: { choice: 1 },
+      },
+    );
+    await new Promise((r) => setTimeout(r, 50));
+    expect(calls).toHaveLength(0);
+    intro.close();
+  });
+
   it("rejects connection with unknown role", async () => {
     const bad = ioClient(`${address}/session`, {
       query: { role: "spectator" },

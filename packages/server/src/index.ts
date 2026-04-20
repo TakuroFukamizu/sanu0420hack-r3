@@ -10,7 +10,7 @@ const app = buildApp();
 const port = Number(process.env.PORT ?? 3000);
 
 await app.ready();
-attachSocketIo(app.server, app.sessionRuntime);
+attachSocketIo(app.server, app.sessionRuntime, app.orchestrator);
 
 app
   .listen({ port, host: "0.0.0.0" })

@@ -19,6 +19,7 @@ export function buildApp(opts: BuildAppOptions = {}): FastifyInstance {
 
   registerHttpRoutes(app);
   app.decorate("sessionRuntime", runtime);
+  app.decorate("orchestrator", orchestrator);
 
   orchestrator?.start();
 
@@ -33,5 +34,6 @@ export function buildApp(opts: BuildAppOptions = {}): FastifyInstance {
 declare module "fastify" {
   interface FastifyInstance {
     sessionRuntime: SessionRuntime;
+    orchestrator: Orchestrator | null;
   }
 }
