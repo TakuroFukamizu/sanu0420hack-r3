@@ -661,3 +661,128 @@ code { font-family: ui-monospace, SFMono-Regular, monospace; }
 }
 .tap-button:active { transform: scale(0.93); }
 .tap-button.tapped { background: #555; box-shadow: none; }
+
+/* ---------------- FX: 全画面テキストエフェクトレイヤ ----------------- */
+/* index_effect.html から移植。Intro 画面上にオーバーレイする。
+   StartView では body 直下の #fx-text-layer 内に「二人の距離」とスタートボタンが
+   DOM 生成される。ゲーム開始時に「レッツスタート！」、終了時に「終了」を表示。*/
+.fx-text-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2000;
+  overflow: hidden;
+}
+.fx-text-layer .pop-text {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-family: "Zen Maru Gothic", sans-serif;
+  font-size: 8vw;
+  font-weight: 900;
+  color: #fff;
+  text-shadow:
+    0 0 20px rgba(255, 255, 255, 0.5),
+    4px 4px 0px #ff0077,
+    -4px -4px 0px #00ccff;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+}
+.fx-text-layer .pop-text.logo-title {
+  left: 50%;
+  top: -20%;
+  font-size: 7vw;
+}
+.fx-text-layer .animate-logo-in {
+  animation: fx-drop-logo 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+.fx-text-layer .animate-logo-out {
+  animation: fx-slide-left-logo 0.5s ease-in forwards;
+}
+@keyframes fx-drop-logo {
+  0%   { top: -20%; opacity: 0; transform: translate(-50%, -50%) scale(1.2); }
+  100% { top: 40%;  opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes fx-slide-left-logo {
+  0%   { left: 50%;  opacity: 1; }
+  100% { left: -50%; opacity: 0; }
+}
+
+.fx-text-layer .animate-begin {
+  left: 50%; top: 50%;
+  animation: fx-zoom-begin 1.2s ease-out forwards;
+}
+@keyframes fx-zoom-begin {
+  0%    { opacity: 0; transform: translate(-50%, -50%) scale(5); }
+  41.6% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  58.3% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100%  { opacity: 0; transform: translate(-50%, -50%) scale(1); }
+}
+
+.fx-text-layer .animate-start {
+  top: 50%; left: -20%;
+  animation: fx-slide-start 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes fx-slide-start {
+  0%    { left: -20%; opacity: 0; transform: translate(-50%, -50%) scale(0.5) rotate(-10deg); }
+  41.6% { left: 50%;  opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(0deg); }
+  58.3% { left: 50%;  opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(0deg); }
+  100%  { left: 120%; opacity: 0; transform: translate(-50%, -50%) scale(0.8) rotate(10deg); }
+}
+
+.fx-text-layer .animate-finish {
+  left: 50%; top: -20%;
+  animation: fx-drop-finish 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes fx-drop-finish {
+  0%    { top: -20%; opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+  41.6% { top: 50%;  opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  58.3% { top: 50%;  opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100%  { top: 50%;  opacity: 0; transform: translate(-50%, -50%) scale(3); }
+}
+
+/* ロゴ演出で一時的に表示する内部スタートボタン */
+.fx-text-layer .internal-start-btn {
+  position: absolute;
+  top: 65%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 14px 48px;
+  font-family: "Zen Maru Gothic", sans-serif;
+  font-size: clamp(24px, 2.5vw, 40px);
+  font-weight: 900;
+  background: linear-gradient(to bottom, #ffea00, #ffaa00);
+  color: #442200;
+  border: 4px solid #fff;
+  border-radius: 9999px;
+  cursor: pointer;
+  box-shadow: 0 8px 0 #cc8800, 0 16px 32px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+  opacity: 0;
+  display: none;
+  transition: transform 0.1s, filter 0.1s;
+}
+.fx-text-layer .internal-start-btn.show {
+  display: block;
+  opacity: 1;
+  animation: fx-pop-in 0.4s 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+.fx-text-layer .internal-start-btn.hide {
+  animation: fx-pure-fade-out 0.5s ease-out forwards;
+}
+@keyframes fx-pop-in {
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+@keyframes fx-pure-fade-out {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+.fx-text-layer .internal-start-btn:hover {
+  transform: translate(-50%, -55%) scale(1.05);
+  filter: brightness(1.1);
+}
+.fx-text-layer .internal-start-btn:active {
+  transform: translate(-50%, -48%) scale(0.95);
+  box-shadow: 0 4px 0 #cc8800;
+}
