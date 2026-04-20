@@ -72,6 +72,14 @@ export class Orchestrator {
   private sessionPlanPromise: Promise<SessionPlan> | null = null;
   private verdictPromise: Promise<string> | null = null;
 
+  /**
+   * stop() のたびに +1 される generation。async timer callback が
+   * `await sessionPlanPromise` / `await verdictPromise` から戻った時点で、
+   * generation が進んでいれば「既に shutdown 済み」なので runtime.send を止める。
+   * (Codex Phase 5 review: stop()-vs-in-flight-async race の防御)
+   */
+  private generation = 0;
+
   private readonly gateway: AiGateway;
   /** 安全網としての mock。safeXxx 系が gateway 失敗時にフォールバックする先。*/
   private readonly fallback: AiGateway;
@@ -104,6 +112,8 @@ export class Orchestrator {
     this.inputs = {};
     this.sessionPlanPromise = null;
     this.verdictPromise = null;
+    // 進行中の async callback が stop 後に runtime.send() するのを防ぐ
+    this.generation += 1;
   }
 
   /**
@@ -205,6 +215,7 @@ export class Orchestrator {
     let qualitative = fromScoreFn;
     const snapNow = this.runtime.get();
     if (this.refineQualitativeOn && snapNow.setup && snapNow.currentRound) {
+      const myGen = this.generation;
       qualitative = await this.safeRefine({
         setup: snapNow.setup,
         round: snapNow.currentRound,
@@ -215,6 +226,7 @@ export class Orchestrator {
       });
       // await 中に stop() / 別ラウンド開始があった場合に stale write を避ける。
       if (myTurn !== this.roundToken) return;
+      if (myGen !== this.generation) return;
     }
 
     this.runtime.send({ type: "ROUND_COMPLETE", score, qualitative });
@@ -238,20 +250,25 @@ export class Orchestrator {
         ) {
           this.sessionPlanPromise = this.safePlan(snap.setup);
         }
-        this.cancelPending = this.scheduler.schedule(
-          this.durations.roundLoadingMs,
-          async () => {
-            await this.emitRoundReady();
-          },
-        );
+        {
+          const myGen = this.generation;
+          this.cancelPending = this.scheduler.schedule(
+            this.durations.roundLoadingMs,
+            async () => {
+              await this.emitRoundReady(myGen);
+            },
+          );
+        }
         return;
       case "roundPlaying": {
         // ROUND_READY 側で currentGame が context にセットされている前提
         this.inputs = {};
         const token = this.roundToken; // schedule 時点の token を capture
+        const myGen = this.generation;
         this.cancelPending = this.scheduler.schedule(
           this.durations.roundPlayingMs,
           async () => {
+            if (myGen !== this.generation) return;
             const cur = this.runtime.get().currentGame;
             if (!cur) return;
             await this.completeRound(cur, token);
@@ -269,6 +286,8 @@ export class Orchestrator {
             qualitativeEvals: this.runtime.get().qualitativeEvals,
           });
         }
+        {
+        const myGen = this.generation;
         this.cancelPending = this.scheduler.schedule(
           this.durations.roundResultMs,
           async () => {
@@ -284,12 +303,16 @@ export class Orchestrator {
                     scores: snapNow.scores,
                     qualitativeEvals: snapNow.qualitativeEvals,
                   });
+              // stop() 後 or 既に別 session に遷移していたら撃たない
+              if (myGen !== this.generation) return;
               this.runtime.send({ type: "SESSION_DONE", verdict });
             } else {
+              if (myGen !== this.generation) return;
               this.runtime.send({ type: "NEXT_ROUND" });
             }
           },
         );
+        }
         return;
       }
       case "waiting":
@@ -309,7 +332,7 @@ export class Orchestrator {
     }
   }
 
-  private async emitRoundReady(): Promise<void> {
+  private async emitRoundReady(gen: number): Promise<void> {
     const snap = this.runtime.get();
     if (!snap.setup || snap.currentRound === null) return;
     if (!this.sessionPlanPromise) {
@@ -317,6 +340,8 @@ export class Orchestrator {
       this.sessionPlanPromise = this.safePlan(snap.setup);
     }
     const plan = await this.sessionPlanPromise;
+    // await から戻ったら stop() or 別 session に遷移しているかもしれない。
+    if (gen !== this.generation) return;
     const game = plan.rounds[snap.currentRound - 1];
     this.runtime.send({ type: "ROUND_READY", game });
   }
