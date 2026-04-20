@@ -93,7 +93,10 @@ export class Orchestrator {
         this.cancelPending = this.scheduler.schedule(
           this.durations.roundResultMs,
           () => {
-            if (round === 3) {
+            // round === null は state machine の不変条件上起きないはずだが、
+            // その場合も NEXT_ROUND を撃つと canAdvanceRound guard で弾かれて
+            // 無音デッドロックになるので SESSION_DONE にフォールバックして抜ける。
+            if (round === null || round === 3) {
               const verdict = mockVerdict(this.runtime.get().scores);
               this.runtime.send({ type: "SESSION_DONE", verdict });
             } else {

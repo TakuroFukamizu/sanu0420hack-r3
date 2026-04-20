@@ -10,7 +10,7 @@ import { RoundResultView } from "../views/player/RoundResultView.js";
 import { TotalResultView } from "../views/player/TotalResultView.js";
 
 export function Player() {
-  useViewport("width=1920");
+  useViewport("width=1920, initial-scale=1.0");
   const [params] = useSearchParams();
   const rawId = params.get("id");
   const playerId: PlayerId | null = rawId === "A" || rawId === "B" ? rawId : null;
