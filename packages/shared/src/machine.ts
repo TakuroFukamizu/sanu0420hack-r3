@@ -41,8 +41,34 @@ export const sessionMachine = setup({
   actions: {
     applySetup: assign(({ event }) => {
       if (event.type !== "SETUP_DONE") return {};
-      return { setup: event.data, currentRound: 1 as RoundNumber };
+      // 仕様: 名前は setup では保持せず、playerNaming で埋める。
+      // stale / 手打ちクライアントから非空が来ても強制的に "" に正規化する。
+      const normalized: SetupData = {
+        relationship: event.data.relationship,
+        players: {
+          A: { id: "A", name: "" },
+          B: { id: "B", name: "" },
+        },
+      };
+      return { setup: normalized };
     }),
+    applyPlayerName: assign(({ context, event }) => {
+      if (event.type !== "PLAYER_NAMED") return {};
+      if (!context.setup) return {};
+      const trimmed = event.name.trim().slice(0, 16);
+      if (trimmed === "") return {};
+      const current = context.setup.players[event.playerId];
+      return {
+        setup: {
+          ...context.setup,
+          players: {
+            ...context.setup.players,
+            [event.playerId]: { ...current, name: trimmed },
+          },
+        },
+      };
+    }),
+    enterRound1: assign({ currentRound: () => 1 as RoundNumber }),
     recordRound: assign(({ context, event }) => {
       if (event.type !== "ROUND_COMPLETE") return {};
       const r = context.currentRound;
@@ -66,6 +92,10 @@ export const sessionMachine = setup({
   guards: {
     canAdvanceRound: ({ context }) =>
       context.currentRound !== null && context.currentRound < 3,
+    bothPlayersNamed: ({ context }) =>
+      !!context.setup &&
+      context.setup.players.A.name !== "" &&
+      context.setup.players.B.name !== "",
   },
 }).createMachine({
   id: "session",
@@ -78,9 +108,19 @@ export const sessionMachine = setup({
     setup: {
       on: {
         SETUP_DONE: {
-          target: "active.roundLoading",
+          target: "playerNaming",
           actions: "applySetup",
         },
+      },
+    },
+    playerNaming: {
+      on: {
+        PLAYER_NAMED: { actions: "applyPlayerName" },
+      },
+      always: {
+        guard: "bothPlayersNamed",
+        target: "active.roundLoading",
+        actions: "enterRound1",
       },
     },
     active: {
@@ -129,6 +169,7 @@ function flattenValue(value: unknown): SessionStateName {
   if (typeof value === "string") {
     if (value === "waiting") return "waiting";
     if (value === "setup") return "setup";
+    if (value === "playerNaming") return "playerNaming";
     if (value === "totalResult") return "totalResult";
   }
   if (value && typeof value === "object" && "active" in value) {
