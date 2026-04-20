@@ -51,21 +51,21 @@ describe("Orchestrator", () => {
     expect(sched.pendingCount).toBe(0);
   });
 
-  it("schedules ROUND_READY when entering roundLoading", () => {
+  it("schedules ROUND_READY when entering roundLoading", async () => {
     completeSetupAndNaming(rt);
     expect(rt.get().state).toBe("roundLoading");
     expect(sched.pendingCount).toBe(1);
 
-    sched.runAll();
+    await sched.runAll();
     expect(rt.get().state).toBe("roundPlaying");
   });
 
-  it("runs a full 3-round cycle to totalResult", () => {
+  it("runs a full 3-round cycle to totalResult", async () => {
     completeSetupAndNaming(rt);
     // 9 schedule tasks drive the full cycle (see plan for enumeration).
     for (let i = 0; i < 9; i++) {
       expect(sched.pendingCount).toBe(1);
-      sched.runAll();
+      await sched.runAll();
     }
 
     const snap = rt.get();
@@ -80,9 +80,9 @@ describe("Orchestrator", () => {
     expect(sched.pendingCount).toBe(0);
   });
 
-  it("does not schedule additional timers in totalResult or waiting", () => {
+  it("does not schedule additional timers in totalResult or waiting", async () => {
     completeSetupAndNaming(rt);
-    for (let i = 0; i < 9; i++) sched.runAll();
+    for (let i = 0; i < 9; i++) await sched.runAll();
     expect(rt.get().state).toBe("totalResult");
     rt.send({ type: "RESET" });
     expect(rt.get().state).toBe("waiting");
@@ -108,9 +108,9 @@ describe("Orchestrator", () => {
     expect(sched.pendingCount).toBe(0);
   });
 
-  it("completes a round immediately when both players submit input", () => {
+  it("completes a round immediately when both players submit input", async () => {
     completeSetupAndNaming(rt); // -> roundLoading
-    sched.runAll(); // roundLoading timer -> ROUND_READY -> roundPlaying
+    await sched.runAll(); // roundLoading timer -> ROUND_READY -> roundPlaying
     expect(rt.get().state).toBe("roundPlaying");
     const current = rt.get().currentGame;
     expect(current?.gameId).toBe("sync-answer");
@@ -134,9 +134,9 @@ describe("Orchestrator", () => {
     expect(sched.pendingCount).toBe(1);
   });
 
-  it("completes a round with partial input on timeout", () => {
+  it("completes a round with partial input on timeout", async () => {
     completeSetupAndNaming(rt); // -> roundLoading
-    sched.runAll(); // -> roundPlaying
+    await sched.runAll(); // -> roundPlaying
     const current = rt.get().currentGame!;
     orch.onPlayerInput("A", {
       round: 1,
@@ -144,15 +144,15 @@ describe("Orchestrator", () => {
       payload: { choice: 2 },
     });
     // B が入れないままタイムアップ
-    sched.runAll();
+    await sched.runAll();
     expect(rt.get().state).toBe("roundResult");
     expect(rt.get().scores[1]).toBe(0); // 片方だけなので scoreFn の fallback
   });
 
   // Codex review: duplicate-submit edge — same player re-tap must be ignored (first-wins)
-  it("ignores duplicate onPlayerInput from the same player (first-wins)", () => {
+  it("ignores duplicate onPlayerInput from the same player (first-wins)", async () => {
     completeSetupAndNaming(rt);
-    sched.runAll(); // -> roundPlaying (sync-answer)
+    await sched.runAll(); // -> roundPlaying (sync-answer)
     const current = rt.get().currentGame!;
     orch.onPlayerInput("A", {
       round: 1,
@@ -178,9 +178,9 @@ describe("Orchestrator", () => {
   // Codex review: 早期完了で state が roundPlaying を離れた後に、stale な onPlayerInput が
   // もう片方分を reintroduce して二重 completeRound が走らないこと。completeRound 内の
   // `state !== "roundPlaying"` guard + roundToken bump の両方で defensive。
-  it("ignores late onPlayerInput after early completion (state guard)", () => {
+  it("ignores late onPlayerInput after early completion (state guard)", async () => {
     completeSetupAndNaming(rt);
-    sched.runAll(); // -> roundPlaying
+    await sched.runAll(); // -> roundPlaying
     const current = rt.get().currentGame!;
     orch.onPlayerInput("A", { round: 1, gameId: "sync-answer" as const, payload: { choice: 0 } });
     orch.onPlayerInput("B", { round: 1, gameId: "sync-answer" as const, payload: { choice: 0 } });
