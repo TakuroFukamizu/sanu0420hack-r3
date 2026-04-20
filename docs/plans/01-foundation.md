@@ -657,7 +657,8 @@ git commit -m "feat(shared): session XState machine + snapshotToDTO"
   "dependencies": {
     "@app/shared": "workspace:*",
     "fastify": "5.0.0",
-    "socket.io": "4.7.5"
+    "socket.io": "4.7.5",
+    "xstate": "5.18.2"
   },
   "devDependencies": {
     "tsx": "4.19.1",
@@ -665,6 +666,8 @@ git commit -m "feat(shared): session XState machine + snapshotToDTO"
   }
 }
 ```
+
+> `xstate` は `@app/shared` の machine 型に依存するだけでなく、`session-runtime.ts` が `createActor`, `Actor` 型を **直接 `from "xstate"` で import** するため、server 側にも明示的に入れる (pnpm は `@app/shared` の依存を自動で再エクスポートしない)。バージョンは shared と揃える。
 
 - [ ] **Step 2: `packages/server/tsconfig.json`**
 
@@ -886,6 +889,11 @@ export class SessionRuntime {
   }
 
   subscribe(listener: SessionListener): () => void {
+    // XState v5 の actor.subscribe は登録時に現在値を即時発火しない。
+    // 「subscribe するとまず現在の state を受け取る」という本ラッパの契約 (テストが
+    // この挙動を要求) を満たすため、ここで同期的に一度 listener を呼んでから actor に
+    // subscribe する。
+    listener(this.get());
     const sub = this.actor.subscribe((snap) => {
       listener(snapshotToDTO(snap));
     });
