@@ -12,7 +12,10 @@
 ## Setup
 ```bash
 pnpm install
+cp packages/server/.env.example packages/server/.env  # Phase 2+ で PLAYER_URL_A/B 等を編集
 ```
+
+サーバは起動時に `packages/server/.env` を自動ロードする (`dotenv/config`)。.env は .gitignore 済み。
 
 ## Dev (2ペインで起動)
 ```bash
