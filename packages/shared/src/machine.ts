@@ -21,11 +21,7 @@ export type SessionEvent =
   | { type: "START" }
   | { type: "SETUP_DONE"; data: SetupData }
   | { type: "PLAYER_NAMED"; playerId: PlayerId; name: string }
-  | {
-      type: "ROUND_READY";
-      gameId: CurrentGame["gameId"];
-      perPlayerConfigs: CurrentGame["perPlayerConfigs"];
-    }
+  | { type: "ROUND_READY"; game: CurrentGame }
   | { type: "ROUND_COMPLETE"; score: number; qualitative: string }
   | { type: "NEXT_ROUND" }
   | { type: "SESSION_DONE"; verdict: string }
@@ -96,12 +92,7 @@ export const sessionMachine = setup({
     }),
     applyGame: assign(({ event }) => {
       if (event.type !== "ROUND_READY") return {};
-      return {
-        currentGame: {
-          gameId: event.gameId,
-          perPlayerConfigs: event.perPlayerConfigs,
-        } as CurrentGame,
-      };
+      return { currentGame: event.game };
     }),
     reset: assign(() => initialContext),
   },

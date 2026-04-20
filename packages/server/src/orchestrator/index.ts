@@ -52,6 +52,13 @@ export class Orchestrator {
   /** 現在ラウンドのプレイヤー入力 payload を蓄積する。roundPlaying エントリ時にクリア。*/
   private inputs: Partial<Record<PlayerId, unknown>> = {};
 
+  /**
+   * 現在 schedule 中の round/game と結び付けられたトークン。roundPlaying の遷移ごとに +1
+   * して、enqueue 済みタイマ callback や scoreGame 発火の idempotency を保証する
+   * (二重の ROUND_COMPLETE 発射や古いラウンドへの入力反映を防ぐ)。
+   */
+  private roundToken = 0;
+
   constructor(
     private runtime: SessionRuntime,
     private scheduler: Scheduler = realScheduler,
@@ -72,24 +79,37 @@ export class Orchestrator {
     this.inputs = {};
   }
 
-  /** ws.ts から forward される。roundPlaying 以外は無視。両者揃ったら即 complete。*/
+  /**
+   * ws.ts から forward される。roundPlaying 以外は無視。両者揃ったら即 complete。
+   * 同一プレイヤーの 2 回目以降の入力は **first-wins で無視** (client UI も disable
+   * 済みだが、壊れた client や再送からの防御)。
+   */
   onPlayerInput(playerId: PlayerId, input: PlayerInput): void {
     const snap = this.runtime.get();
     if (snap.state !== "roundPlaying") return;
     if (!snap.currentGame) return;
     if (input.round !== snap.currentRound) return;
     if (input.gameId !== snap.currentGame.gameId) return;
+    if (this.inputs[playerId] !== undefined) return; // first-wins
 
     this.inputs[playerId] = input.payload;
 
     if (this.inputs.A !== undefined && this.inputs.B !== undefined) {
       this.cancelPending?.();
       this.cancelPending = null;
-      this.completeRound(snap.currentGame);
+      this.completeRound(snap.currentGame, this.roundToken);
     }
   }
 
-  private completeRound(current: CurrentGame): void {
+  /**
+   * token で呼び出し時点の round 同一性を保証する。既に別ラウンドに遷移済みなら何もしない
+   * (遅延して fire した古いタイマや二重呼び出しを吸収)。
+   */
+  private completeRound(current: CurrentGame, token: number): void {
+    if (token !== this.roundToken) return;
+    if (this.runtime.get().state !== "roundPlaying") return;
+    // 以降 completeRound は 1 回限り: token を bump して後続を無効化する
+    this.roundToken += 1;
     const { score, qualitative } = scoreGame(current, this.inputs);
     this.inputs = {};
     this.runtime.send({ type: "ROUND_COMPLETE", score, qualitative });
@@ -109,18 +129,20 @@ export class Orchestrator {
           () => this.emitRoundReady(),
         );
         return;
-      case "roundPlaying":
+      case "roundPlaying": {
         // ROUND_READY 側で currentGame が context にセットされている前提
         this.inputs = {};
+        const token = this.roundToken; // schedule 時点の token を capture
         this.cancelPending = this.scheduler.schedule(
           this.durations.roundPlayingMs,
           () => {
             const cur = this.runtime.get().currentGame;
             if (!cur) return;
-            this.completeRound(cur);
+            this.completeRound(cur, token);
           },
         );
         return;
+      }
       case "roundResult": {
         const round: RoundNumber | null = snap.currentRound;
         this.cancelPending = this.scheduler.schedule(
@@ -152,10 +174,6 @@ export class Orchestrator {
     if (!snap.setup || snap.currentRound === null) return;
     const gameId = pickGameForRound(snap.currentRound);
     const game = genPerPlayerConfigs(gameId, snap.setup);
-    this.runtime.send({
-      type: "ROUND_READY",
-      gameId: game.gameId,
-      perPlayerConfigs: game.perPlayerConfigs,
-    });
+    this.runtime.send({ type: "ROUND_READY", game });
   }
 }

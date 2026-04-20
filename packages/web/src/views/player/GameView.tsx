@@ -28,10 +28,16 @@ export function GameView({
     );
   }
 
+  // ラウンド+gameId をキーに remount し、前ラウンドの picked / tapped local state を
+  // 確実にリセットする (同じ gameId が連続した場合にコンポーネントが再利用され、
+  // submitted のまま固まるのを防ぐ — Codex review Phase 4 Critical)。
+  const key = `r${round}-${currentGame.gameId}`;
+
   switch (currentGame.gameId) {
     case "sync-answer":
       return (
         <SyncAnswerGame
+          key={key}
           config={currentGame.perPlayerConfigs[playerId]}
           onSubmit={(i) => onSyncAnswer(i.choice)}
         />
@@ -39,6 +45,7 @@ export function GameView({
     case "partner-quiz":
       return (
         <PartnerQuizGame
+          key={key}
           playerId={playerId}
           config={currentGame.perPlayerConfigs[playerId]}
           onSubmit={(i) => onPartnerQuiz(i.choice)}
@@ -47,6 +54,7 @@ export function GameView({
     case "timing-sync":
       return (
         <TimingSyncGame
+          key={key}
           config={currentGame.perPlayerConfigs[playerId]}
           onSubmit={(i) => onTimingSync(i.tapTime)}
         />

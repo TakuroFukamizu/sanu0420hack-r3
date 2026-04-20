@@ -1,4 +1,9 @@
 import type { CurrentGame } from "./games/registry.js";
+import type {
+  SyncAnswerInput,
+  PartnerQuizInput,
+  TimingSyncInput,
+} from "./games/index.js";
 
 export type { CurrentGame };
 
@@ -43,12 +48,12 @@ export type ClientEvent =
   | { type: "SETUP_DONE"; data: SetupData }
   | { type: "RESET" };
 
-// Client → Server (player がゲーム中に送る入力)
-export interface PlayerInput {
-  round: RoundNumber;
-  gameId: string;
-  payload: unknown;
-}
+// Client → Server (player がゲーム中に送る入力)。
+// gameId と payload を discriminated union で結ぶ — ランタイム narrow で payload 型が確定。
+export type PlayerInput =
+  | { round: RoundNumber; gameId: "sync-answer"; payload: SyncAnswerInput }
+  | { round: RoundNumber; gameId: "partner-quiz"; payload: PartnerQuizInput }
+  | { round: RoundNumber; gameId: "timing-sync"; payload: TimingSyncInput };
 
 export type ClientToServerEvents = {
   "client:event": (event: ClientEvent) => void;

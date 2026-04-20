@@ -97,10 +97,12 @@ describe("Orchestrator", () => {
 
     rt.send({
       type: "ROUND_READY",
-      gameId: "sync-answer",
-      perPlayerConfigs: {
-        A: { question: "Q", choices: ["a", "b", "c", "d"] },
-        B: { question: "Q", choices: ["a", "b", "c", "d"] },
+      game: {
+        gameId: "sync-answer",
+        perPlayerConfigs: {
+          A: { question: "Q", choices: ["a", "b", "c", "d"] },
+          B: { question: "Q", choices: ["a", "b", "c", "d"] },
+        },
       },
     });
     expect(sched.pendingCount).toBe(0);
@@ -116,13 +118,13 @@ describe("Orchestrator", () => {
     // 両者 input: sync-answer の場合は { choice: 0..3 }
     orch.onPlayerInput("A", {
       round: 1,
-      gameId: current!.gameId,
+      gameId: "sync-answer" as const,
       payload: { choice: 0 },
     });
     expect(rt.get().state).toBe("roundPlaying"); // 1人だけではまだ
     orch.onPlayerInput("B", {
       round: 1,
-      gameId: current!.gameId,
+      gameId: "sync-answer" as const,
       payload: { choice: 0 },
     });
     expect(rt.get().state).toBe("roundResult");
@@ -138,12 +140,55 @@ describe("Orchestrator", () => {
     const current = rt.get().currentGame!;
     orch.onPlayerInput("A", {
       round: 1,
-      gameId: current.gameId,
+      gameId: "sync-answer" as const,
       payload: { choice: 2 },
     });
     // B が入れないままタイムアップ
     sched.runAll();
     expect(rt.get().state).toBe("roundResult");
     expect(rt.get().scores[1]).toBe(0); // 片方だけなので scoreFn の fallback
+  });
+
+  // Codex review: duplicate-submit edge — same player re-tap must be ignored (first-wins)
+  it("ignores duplicate onPlayerInput from the same player (first-wins)", () => {
+    completeSetupAndNaming(rt);
+    sched.runAll(); // -> roundPlaying (sync-answer)
+    const current = rt.get().currentGame!;
+    orch.onPlayerInput("A", {
+      round: 1,
+      gameId: "sync-answer" as const,
+      payload: { choice: 0 },
+    });
+    // 2 度目の A は無視されるべき (state は roundPlaying のまま、B を待つ)
+    orch.onPlayerInput("A", {
+      round: 1,
+      gameId: "sync-answer" as const,
+      payload: { choice: 3 }, // 変えても反映されない
+    });
+    expect(rt.get().state).toBe("roundPlaying");
+    orch.onPlayerInput("B", {
+      round: 1,
+      gameId: "sync-answer" as const,
+      payload: { choice: 0 }, // A の最初の choice=0 と一致
+    });
+    expect(rt.get().state).toBe("roundResult");
+    expect(rt.get().scores[1]).toBe(100); // first-wins なので一致した
+  });
+
+  // Codex review: 早期完了で state が roundPlaying を離れた後に、stale な onPlayerInput が
+  // もう片方分を reintroduce して二重 completeRound が走らないこと。completeRound 内の
+  // `state !== "roundPlaying"` guard + roundToken bump の両方で defensive。
+  it("ignores late onPlayerInput after early completion (state guard)", () => {
+    completeSetupAndNaming(rt);
+    sched.runAll(); // -> roundPlaying
+    const current = rt.get().currentGame!;
+    orch.onPlayerInput("A", { round: 1, gameId: "sync-answer" as const, payload: { choice: 0 } });
+    orch.onPlayerInput("B", { round: 1, gameId: "sync-answer" as const, payload: { choice: 0 } });
+    expect(rt.get().state).toBe("roundResult");
+    const scoreBefore = rt.get().scores[1];
+    // ここで遅延して届いた第三の input (壊れた client / ネット遅延) を流す。
+    orch.onPlayerInput("A", { round: 1, gameId: "sync-answer" as const, payload: { choice: 3 } });
+    expect(rt.get().state).toBe("roundResult");
+    expect(rt.get().scores[1]).toBe(scoreBefore);
   });
 });

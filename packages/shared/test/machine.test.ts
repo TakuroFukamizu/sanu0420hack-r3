@@ -15,10 +15,12 @@ function setupData() {
 function mockSyncAnswerEvent() {
   return {
     type: "ROUND_READY" as const,
-    gameId: "sync-answer" as const,
-    perPlayerConfigs: {
-      A: { question: "Q", choices: ["a", "b", "c", "d"] as [string, string, string, string] },
-      B: { question: "Q", choices: ["a", "b", "c", "d"] as [string, string, string, string] },
+    game: {
+      gameId: "sync-answer" as const,
+      perPlayerConfigs: {
+        A: { question: "Q", choices: ["a", "b", "c", "d"] as [string, string, string, string] },
+        B: { question: "Q", choices: ["a", "b", "c", "d"] as [string, string, string, string] },
+      },
     },
   };
 }
