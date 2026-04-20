@@ -29,6 +29,9 @@ importers:
       socket.io:
         specifier: 4.7.5
         version: 4.7.5
+      xstate:
+        specifier: 5.18.2
+        version: 5.18.2
     devDependencies:
       socket.io-client:
         specifier: 4.7.5
