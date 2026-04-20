@@ -1,0 +1,197 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, "Noto Sans JP", sans-serif;
+}
+html, body, #root { margin: 0; padding: 0; height: 100%; }
+body { background: #111; color: #eee; }
+main { min-height: 100vh; box-sizing: border-box; }
+button { font-family: inherit; }
+code { font-family: ui-monospace, SFMono-Regular, monospace; }
+
+/* ---------------- 動く背景 (Start / Waiting 共通) ---------------- */
+.bg-pan {
+  position: absolute;
+  inset: -20%;
+  background: linear-gradient(135deg, #ff7a59, #7a5aff, #59c3ff, #59ffb6);
+  background-size: 300% 300%;
+  animation: bg-pan 20s ease-in-out infinite;
+  filter: blur(60px);
+  opacity: 0.85;
+  z-index: 0;
+}
+@keyframes bg-pan {
+  0%   { background-position: 0% 0%; }
+  50%  { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+/* ---------------- Intro: Start ---------------- */
+.intro-start, .player-waiting {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.intro-start .content, .player-waiting .content {
+  position: relative;
+  z-index: 1;
+  text-align: center;
+  color: white;
+  text-shadow: 0 2px 20px rgba(0,0,0,0.6);
+}
+.intro-start h1, .player-waiting h1 {
+  font-size: clamp(48px, 8vw, 96px);
+  margin: 0 0 32px;
+  letter-spacing: 0.05em;
+}
+.start-button {
+  font-size: clamp(32px, 5vw, 56px);
+  padding: 20px 64px;
+  border-radius: 999px;
+  background: white;
+  color: black;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+  transition: transform 120ms ease;
+}
+.start-button:hover, .start-button:focus-visible { transform: scale(1.05); outline: none; }
+
+/* ---------------- Intro: Setup ---------------- */
+.intro-setup {
+  display: grid;
+  place-items: center;
+  padding: 40px;
+  background: #141428;
+}
+.intro-setup form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 520px;
+  width: 100%;
+}
+.intro-setup h1 { margin: 0; font-size: 32px; }
+.intro-setup label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 18px;
+  color: #ccd;
+}
+.intro-setup input {
+  font-size: 24px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #334;
+  background: #1e1e32;
+  color: white;
+}
+.intro-setup input:focus-visible { outline: 2px solid #7a5aff; }
+.intro-setup button {
+  font-size: 24px;
+  padding: 14px 24px;
+  border-radius: 8px;
+  background: #7a5aff;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.intro-setup button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ---------------- Intro: Guide ---------------- */
+.intro-guide {
+  padding: 40px;
+  text-align: center;
+  background: #141428;
+}
+.intro-guide h1 { font-size: 36px; margin: 0 0 12px; }
+.intro-guide .hint { color: #aab; margin-bottom: 32px; }
+.intro-guide .url-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.intro-guide .url-grid .card {
+  background: #1e1e32;
+  border-radius: 12px;
+  padding: 24px;
+}
+.intro-guide .url-grid h2 { margin: 0 0 12px; font-size: 24px; }
+.intro-guide .url-grid .placement {
+  color: #8af;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+.intro-guide .url-grid code {
+  display: block;
+  word-break: break-all;
+  margin-top: 12px;
+  font-size: 14px;
+  color: #9ae;
+}
+.intro-guide .qr-wrap {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+/* ---------------- Intro: Finish ---------------- */
+.intro-finish {
+  display: grid;
+  place-items: center;
+  padding: 40px;
+  background: #141428;
+  text-align: center;
+}
+.intro-finish button {
+  font-size: 20px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  background: #ff7a59;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin-top: 24px;
+}
+
+/* ---------------- Player: Loading ---------------- */
+.player-loading {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 40px;
+  background: radial-gradient(ellipse at center, #201844, #0a0a14);
+  color: white;
+}
+.player-loading h1 { font-size: clamp(48px, 10vw, 96px); margin: 0 0 16px; }
+.player-loading .pulse {
+  font-size: 28px;
+  animation: pulse 1.2s ease-in-out infinite;
+  color: #ccd;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* ---------------- Player: stubs (Phase 3〜4 で差し替え) ---------------- */
+.player-stub {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 40px;
+  color: #ccd;
+}
+.player-stub h1 { font-size: 40px; margin: 0 0 12px; }
+.player-stub .tag { color: #8af; font-size: 14px; }
+
+/* ---------------- 共通 ---------------- */
+.loading-screen, .error-screen {
+  display: grid;
+  place-items: center;
+  padding: 40px;
+  font-size: 20px;
+}
+.error-screen { color: #ff6b6b; }

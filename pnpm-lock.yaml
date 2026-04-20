@@ -24,7 +24,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       dotenv:
-        specifier: ^17.4.2
+        specifier: 17.4.2
         version: 17.4.2
       fastify:
         specifier: 5.0.0
@@ -54,6 +54,9 @@ importers:
       '@app/shared':
         specifier: workspace:*
         version: link:../shared
+      qrcode.react:
+        specifier: 4.1.0
+        version: 4.1.0(react@18.3.1)
       react:
         specifier: 18.3.1
         version: 18.3.1
@@ -963,6 +966,11 @@ packages:
   proxy-addr@2.0.7:
     resolution: {integrity: sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==}
     engines: {node: '>= 0.10'}
+
+  qrcode.react@4.1.0:
+    resolution: {integrity: sha512-uqXVIIVD/IPgWLYxbOczCNAQw80XCM/LulYDADF+g2xDsPj5OoRwSWtIS4jGyp295wyjKstfG1qIv/I2/rNWpQ==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0
 
   quick-format-unescaped@4.0.4:
     resolution: {integrity: sha512-tYC1Q1hgyRuHgloV/YXs2w15unPVh8qfu/qCTfhTYamaw7fyhumKa2yGpdSo87vY32rIclj+4fWYQXUMs9EHvg==}
@@ -2021,6 +2029,10 @@ snapshots:
     dependencies:
       forwarded: 0.2.0
       ipaddr.js: 1.9.1
+
+  qrcode.react@4.1.0(react@18.3.1):
+    dependencies:
+      react: 18.3.1
 
   quick-format-unescaped@4.0.4: {}
 
