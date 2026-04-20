@@ -32,7 +32,8 @@
 stateDiagram-v2
     [*] --> Waiting
     Waiting --> Setup
-    Setup --> Active
+    Setup --> PlayerNaming
+    PlayerNaming --> Active
 
     state Active {
         [*] --> RoundN_Loading

@@ -55,6 +55,7 @@
 | --- | --- | --- |
 | `waiting` | Start ビュー (STARTボタン) | Waiting ビュー (1枚絵) |
 | `setup` | Setup ビュー (名前2つ + 関係性 入力フォーム) | Waiting ビュー |
+| `playerNaming` | PlayerNamingWait ビュー (プレイヤーの入力待機中) | NamingView (自分が未入力) / Waiting ビュー (入力済み) |
 | `active.roundLoading` | Guide ビュー (プレイヤー画面へ誘導 / AI選出中) | Loading ビュー (次ラウンド準備中) |
 | `active.roundPlaying` | Guide ビュー (Watchモード、進捗表示) | Game ビュー (当該Roundのゲーム) |
 | `active.roundResult` | Guide ビュー (次Round告知) | RoundResult ビュー (煽りコメント) |
