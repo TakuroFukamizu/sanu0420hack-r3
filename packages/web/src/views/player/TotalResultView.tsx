@@ -20,7 +20,7 @@ function verdictLine(verdict: string[] | null, index: number): string {
 export function TotalResultView({ scores, verdict, onFinish }: Props) {
   const [page, setPage] = useState(0);
 
-  if (page < 3) {
+  if (page < TOTAL_PAGES - 1) {
     return (
       <main className="player-total-result verdict-page">
         <div className="verdict-body">
